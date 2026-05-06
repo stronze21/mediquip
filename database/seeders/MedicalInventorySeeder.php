@@ -52,6 +52,14 @@ class MedicalInventorySeeder extends Seeder
             ['name' => 'North Luzon Medical Equipment Trading', 'tin' => '009-321-654-000', 'business_style' => 'Medical Equipment Distributor', 'contact_person' => 'Rafael Santos', 'email' => 'sales@nlmedical.ph', 'phone' => '+63 2 8123 4100', 'address' => 'Quezon City', 'city' => 'Quezon City', 'rating' => 4.7, 'lead_time_days' => 10],
             ['name' => 'MediSupply Philippines Inc.', 'tin' => '006-742-118-000', 'business_style' => 'Medical Supplies Wholesale', 'contact_person' => 'Clara Reyes', 'email' => 'orders@medisupply.ph', 'phone' => '+63 2 8455 2200', 'address' => 'Mandaluyong City', 'city' => 'Mandaluyong', 'rating' => 4.5, 'lead_time_days' => 5],
             ['name' => 'PharmaCare Distribution Corp.', 'tin' => '004-889-210-000', 'business_style' => 'Pharmaceutical Distributor', 'contact_person' => 'Joel Garcia', 'email' => 'procurement@pharmacare.ph', 'phone' => '+63 2 8777 3100', 'address' => 'Pasig City', 'city' => 'Pasig', 'rating' => 4.8, 'lead_time_days' => 7],
+            ['name' => 'Medical Trading', 'business_style' => 'Medical Trading', 'phone' => '09499935856', 'country' => 'Philippines', 'rating' => 4.0, 'lead_time_days' => 7],
+            ['name' => 'Meed Pharma', 'business_style' => 'Pharmaceutical Supplier', 'phone' => '09177108524', 'country' => 'Philippines', 'rating' => 4.0, 'lead_time_days' => 7],
+            ['name' => 'Skymed', 'business_style' => 'Medical Supplier', 'phone' => '09605008027', 'country' => 'Philippines', 'rating' => 4.0, 'lead_time_days' => 7],
+            ['name' => 'MEDSMART', 'business_style' => 'Medical Supplier', 'phone' => '09685408571', 'country' => 'Philippines', 'rating' => 4.0, 'lead_time_days' => 7],
+            ['name' => 'MRL', 'business_style' => 'Medical Supplier', 'phone' => '09770095816', 'country' => 'Philippines', 'rating' => 4.0, 'lead_time_days' => 7],
+            ['name' => 'REGIMED', 'business_style' => 'Pharmaceutical Supplier', 'phone' => '09175727232', 'country' => 'Philippines', 'rating' => 4.0, 'lead_time_days' => 7],
+            ['name' => 'MEDICAL MART', 'business_style' => 'Medical Supplies Retailer', 'phone' => '09269241517', 'country' => 'Philippines', 'rating' => 4.0, 'lead_time_days' => 7],
+            ['name' => 'METROGEN', 'business_style' => 'Medical Supplier', 'phone' => '09177257106', 'country' => 'Philippines', 'rating' => 4.0, 'lead_time_days' => 7],
         ];
 
         foreach ($suppliers as $supplier) {
