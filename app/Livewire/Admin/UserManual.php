@@ -26,7 +26,7 @@ class UserManual extends Component
             'content' => 'inventory'
         ],
         'sales' => [
-            'title' => 'Sales & POS',
+            'title' => 'Sales & Invoice',
             'icon' => 'o-shopping-cart',
             'content' => 'sales'
         ],

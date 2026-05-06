@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? 'Point of Sale' }} - {{ config('app.name', 'Motorcycle Inventory') }}</title>
+    <title>{{ $title ?? 'Invoice' }} - {{ config('app.name', 'Motorcycle Inventory') }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -27,8 +27,8 @@
                 <!-- Left side - Logo/Title -->
                 <div class="flex items-center">
                     <div class="flex items-center flex-shrink-0">
-                        <x-heroicon-o-computer-desktop class="w-8 h-8 text-primary" />
-                        <span class="ml-2 text-xl font-semibold text-base-900">Point of Sale</span>
+                        <x-heroicon-o-document-text class="w-8 h-8 text-primary" />
+                        <span class="ml-2 text-xl font-semibold text-base-900">Invoice</span>
                     </div>
                 </div>
 
@@ -132,7 +132,7 @@
             });
         }, 60000);
 
-        // Keyboard shortcuts for POS
+        // Keyboard shortcuts for invoice screen
         document.addEventListener('keydown', function(e) {
             // F11 for fullscreen
             if (e.key === 'F11') {
@@ -159,7 +159,7 @@
         });
     </script>
 
-    <!-- Custom POS Styles -->
+    <!-- Custom invoice styles -->
     <style>
         /* Fullscreen styles */
         body:-webkit-full-screen {
@@ -184,7 +184,7 @@
             }
         }
 
-        /* Mobile responsiveness for POS */
+        /* Mobile responsiveness for invoice screen */
         @media (max-width: 768px) {
             .pos-mobile-stack {
                 flex-direction: column;

@@ -153,7 +153,7 @@
             </label>
             <label class="flex items-center gap-3 cursor-pointer">
                 <input type="checkbox" class="checkbox checkbox-primary" />
-                <span class="text-base-content/80">Test the POS system with a sample sale</span>
+                <span class="text-base-content/80">Test the Invoice system with a sample sale</span>
             </label>
         </div>
     </div>
@@ -171,7 +171,7 @@
             <div class="p-4 text-center card-body">
                 <x-mary-icon name="o-shopping-cart" class="w-8 h-8 mx-auto mb-2" />
                 <h4 class="font-semibold">2. Process Sales</h4>
-                <p class="text-sm opacity-90">Use POS to sell products and track inventory</p>
+                <p class="text-sm opacity-90">Use Invoice to sell products and track inventory</p>
             </div>
         </div>
         <div class="card bg-accent text-accent-content">
@@ -207,17 +207,17 @@
                 <tr>
                     <td>Add Product to Sale</td>
                     <td><kbd class="kbd kbd-sm">F2</kbd></td>
-                    <td>POS</td>
+                    <td>Invoice</td>
                 </tr>
                 <tr>
                     <td>Complete Sale</td>
                     <td><kbd class="kbd kbd-sm">F3</kbd></td>
-                    <td>POS</td>
+                    <td>Invoice</td>
                 </tr>
                 <tr>
                     <td>Barcode Scanner</td>
                     <td><kbd class="kbd kbd-sm">F4</kbd></td>
-                    <td>POS</td>
+                    <td>Invoice</td>
                 </tr>
             </tbody>
         </table>

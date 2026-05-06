@@ -3,17 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Sale;
-use Illuminate\Http\Request;
+use App\Services\EInvoiceService;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Http\Response;
 
 class InvoiceController extends Controller
 {
+    public function __construct(private readonly EInvoiceService $eInvoiceService)
+    {
+    }
+
     public function download(Sale $sale)
     {
         try {
             // Check if user has permission to view this sale
-            if (!auth()->user()->can('process_sales')) {
+            if (!auth()->user()->canProcessSales()) {
                 abort(403, 'Unauthorized to download invoices.');
             }
 
@@ -58,6 +61,33 @@ class InvoiceController extends Controller
         }
     }
 
+    public function downloadEInvoiceJson(Sale $sale)
+    {
+        $this->authorizeCompletedSaleExport($sale);
+
+        $payload = $this->eInvoiceService->payload($sale);
+        $filename = 'e-invoice-' . $sale->invoice_number . '.json';
+
+        return response()->streamDownload(function () use ($payload) {
+            echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        }, $filename, [
+            'Content-Type' => 'application/json',
+        ]);
+    }
+
+    public function downloadEInvoiceXml(Sale $sale)
+    {
+        $this->authorizeCompletedSaleExport($sale);
+
+        $filename = 'e-invoice-' . $sale->invoice_number . '.xml';
+
+        return response()->streamDownload(function () use ($sale) {
+            echo $this->eInvoiceService->xml($sale);
+        }, $filename, [
+            'Content-Type' => 'application/xml',
+        ]);
+    }
+
     public function preview(Sale $sale)
     {
         try {
@@ -71,6 +101,17 @@ class InvoiceController extends Controller
             return response()->json([
                 'error' => 'Failed to preview invoice: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    private function authorizeCompletedSaleExport(Sale $sale): void
+    {
+        if (!auth()->user()?->canProcessSales()) {
+            abort(403, 'Unauthorized to export invoices.');
+        }
+
+        if ($sale->status !== 'completed') {
+            abort(404, 'Sale not found or not completed.');
         }
     }
 }

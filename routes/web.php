@@ -113,7 +113,8 @@ Route::middleware([
 
     // Sales Routes - For users with process_sales permission
     Route::middleware(['permission:process_sales'])->prefix('sales')->name('sales.')->group(function () {
-        Route::get('/pos', PointOfSale::class)->name('pos');
+        Route::redirect('/pos', '/sales/invoice');
+        Route::get('/invoice', PointOfSale::class)->name('pos');
         Route::get('/history', SalesHistory::class)->name('history');
         Route::get('/customers', CustomerManagement::class)->name('customers');
         Route::get('/shifts', ShiftManagement::class)->name('shifts');
@@ -124,6 +125,8 @@ Route::middleware([
     Route::middleware(['permission:process_sales'])->prefix('invoice')->name('invoice.')->group(function () {
         Route::get('/{sale}/download', [InvoiceController::class, 'download'])->name('download');
         Route::get('/{sale}/preview', [InvoiceController::class, 'preview'])->name('preview');
+        Route::get('/{sale}/e-invoice.json', [InvoiceController::class, 'downloadEInvoiceJson'])->name('e-invoice.json');
+        Route::get('/{sale}/e-invoice.xml', [InvoiceController::class, 'downloadEInvoiceXml'])->name('e-invoice.xml');
     });
 
     // Purchasing Routes - For users with manage_inventory permission

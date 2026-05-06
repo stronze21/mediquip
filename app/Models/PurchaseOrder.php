@@ -25,12 +25,22 @@ class PurchaseOrder extends Model
         'contact_number',
         'terms',
         'due_date',
+        'discount_type',
+        'discount_value',
+        'discount_amount',
+        'tax_type',
+        'tax_rate',
+        'tax_amount',
         'received_date',
         'notes'
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'discount_value' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'tax_rate' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
         'order_date' => 'date',
         'expected_date' => 'date',
         'due_date' => 'date',

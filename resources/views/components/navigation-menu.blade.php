@@ -68,7 +68,7 @@
                                 class="absolute left-0 z-50 w-48 mt-2 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5">
                                 <div class="py-1">
                                     <a href="{{ route('sales.pos') }}"
-                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Point of Sale</a>
+                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Invoice</a>
                                     <a href="{{ route('sales.history') }}"
                                         class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sales History</a>
                                     <a href="{{ route('sales.customers') }}"
@@ -276,7 +276,7 @@
                     <div class="block px-4 py-2 text-xs text-gray-400 uppercase">
                         {{ __('Sales') }}
                     </div>
-                    <x-responsive-nav-link href="{{ route('sales.pos') }}">Point of Sale</x-responsive-nav-link>
+                    <x-responsive-nav-link href="{{ route('sales.pos') }}">Invoice</x-responsive-nav-link>
                     <x-responsive-nav-link href="{{ route('sales.history') }}">Sales History</x-responsive-nav-link>
                     <x-responsive-nav-link href="{{ route('sales.customers') }}">Customers</x-responsive-nav-link>
                 </div>

@@ -88,7 +88,7 @@
         </div>
     </div>
 
-    <h3 class="mb-4 text-xl font-semibold text-base-content">POS & Sales Issues</h3>
+    <h3 class="mb-4 text-xl font-semibold text-base-content">Invoice & Sales Issues</h3>
 
     <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2">
         <div class="shadow-sm card bg-base-100">
@@ -500,11 +500,11 @@
             <div class="mb-2 collapse collapse-arrow bg-base-200">
                 <input type="radio" name="faq" />
                 <div class="text-lg font-medium collapse-title">
-                    What are the POS keyboard shortcuts?
+                    What are the Invoice keyboard shortcuts?
                 </div>
                 <div class="collapse-content">
                     <div class="space-y-2 text-sm">
-                        <p>The POS system includes several keyboard shortcuts for faster operation:</p>
+                        <p>The Invoice system includes several keyboard shortcuts for faster operation:</p>
                         <ul class="mt-2 space-y-1 list-disc list-inside">
                             <li><kbd class="kbd kbd-xs">F1</kbd> - Open Barcode Scanner</li>
                             <li><kbd class="kbd kbd-xs">F2</kbd> - Complete Sale (Payment)</li>
@@ -514,7 +514,7 @@
                             <li><kbd class="kbd kbd-xs">Esc</kbd> - Close Modals</li>
                         </ul>
                         <div class="mt-2 alert alert-info">
-                            <strong>Tip:</strong> Shortcuts are shown as small indicators on POS buttons.
+                            <strong>Tip:</strong> Shortcuts are shown as small indicators on Invoice buttons.
                         </div>
                     </div>
                 </div>
@@ -543,7 +543,7 @@
     <div class="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2">
         <div class="shadow-sm card bg-base-100">
             <div class="p-4 card-body">
-                <h4 class="text-lg card-title text-success">✓ Recommended Browsers</h4>
+                <h4 class="text-lg card-title text-success">âœ“ Recommended Browsers</h4>
                 <div class="space-y-2 text-sm">
                     <div class="flex items-center justify-between">
                         <span>Google Chrome</span>
@@ -567,7 +567,7 @@
 
         <div class="shadow-sm card bg-base-100">
             <div class="p-4 card-body">
-                <h4 class="text-lg card-title text-warning">⚠ Not Recommended</h4>
+                <h4 class="text-lg card-title text-warning">âš  Not Recommended</h4>
                 <div class="space-y-2 text-sm">
                     <div class="flex items-center justify-between">
                         <span>Internet Explorer</span>
@@ -631,21 +631,21 @@
                 <div>
                     <h5 class="mb-3 font-semibold">Essential Information</h5>
                     <ul class="space-y-1 text-sm text-base-content/80">
-                        <li>• What you were trying to do</li>
-                        <li>• What actually happened</li>
-                        <li>• Exact error message (if any)</li>
-                        <li>• Time when error occurred</li>
-                        <li>• Your user role/permissions</li>
-                        <li>• Browser and version</li>
-                        <li>• Steps to reproduce the issue</li>
+                        <li>â€¢ What you were trying to do</li>
+                        <li>â€¢ What actually happened</li>
+                        <li>â€¢ Exact error message (if any)</li>
+                        <li>â€¢ Time when error occurred</li>
+                        <li>â€¢ Your user role/permissions</li>
+                        <li>â€¢ Browser and version</li>
+                        <li>â€¢ Steps to reproduce the issue</li>
                     </ul>
                 </div>
                 <div>
                     <h5 class="mb-3 font-semibold">Helpful Additions</h5>
                     <ul class="space-y-1 text-sm text-base-content/80">
-                        <li>• Workarounds you've tried</li>
-                        <li>• Impact on your work</li>
-                        <li>• Urgency level</li>
+                        <li>â€¢ Workarounds you've tried</li>
+                        <li>â€¢ Impact on your work</li>
+                        <li>â€¢ Urgency level</li>
                     </ul>
                 </div>
             </div>
@@ -805,31 +805,31 @@
                 <div class="p-4 border rounded border-primary/20 bg-primary/5">
                     <h5 class="mb-2 font-semibold text-primary">Browser Optimization</h5>
                     <ul class="space-y-1 text-sm">
-                        <li>• Close unused tabs</li>
-                        <li>• Clear cache weekly</li>
-                        <li>• Disable unnecessary extensions</li>
-                        <li>• Update browser regularly</li>
-                        <li>• Use bookmarks for quick access</li>
+                        <li>â€¢ Close unused tabs</li>
+                        <li>â€¢ Clear cache weekly</li>
+                        <li>â€¢ Disable unnecessary extensions</li>
+                        <li>â€¢ Update browser regularly</li>
+                        <li>â€¢ Use bookmarks for quick access</li>
                     </ul>
                 </div>
                 <div class="p-4 border rounded border-secondary/20 bg-secondary/5">
                     <h5 class="mb-2 font-semibold text-secondary">Network Optimization</h5>
                     <ul class="space-y-1 text-sm">
-                        <li>• Use wired connection when possible</li>
-                        <li>• Position WiFi router centrally</li>
-                        <li>• Limit bandwidth-heavy apps</li>
-                        <li>• Check for network congestion</li>
-                        <li>• Update network drivers</li>
+                        <li>â€¢ Use wired connection when possible</li>
+                        <li>â€¢ Position WiFi router centrally</li>
+                        <li>â€¢ Limit bandwidth-heavy apps</li>
+                        <li>â€¢ Check for network congestion</li>
+                        <li>â€¢ Update network drivers</li>
                     </ul>
                 </div>
                 <div class="p-4 border rounded border-accent/20 bg-accent/5">
                     <h5 class="mb-2 font-semibold text-accent">System Maintenance</h5>
                     <ul class="space-y-1 text-sm">
-                        <li>• Restart computer daily</li>
-                        <li>• Keep OS updated</li>
-                        <li>• Free up disk space</li>
-                        <li>• Run virus scans</li>
-                        <li>• Check for malware</li>
+                        <li>â€¢ Restart computer daily</li>
+                        <li>â€¢ Keep OS updated</li>
+                        <li>â€¢ Free up disk space</li>
+                        <li>â€¢ Run virus scans</li>
+                        <li>â€¢ Check for malware</li>
                     </ul>
                 </div>
             </div>

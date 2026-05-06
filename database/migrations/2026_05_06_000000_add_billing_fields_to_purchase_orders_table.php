@@ -16,6 +16,12 @@ return new class extends Migration
             $table->string('contact_number')->nullable()->after('contact_person');
             $table->string('terms')->nullable()->after('contact_number');
             $table->date('due_date')->nullable()->after('terms');
+            $table->string('discount_type')->default('regular')->after('due_date');
+            $table->decimal('discount_value', 10, 2)->default(0)->after('discount_type');
+            $table->decimal('discount_amount', 10, 2)->default(0)->after('discount_value');
+            $table->string('tax_type')->default('vat_12')->after('discount_amount');
+            $table->decimal('tax_rate', 5, 2)->default(12)->after('tax_type');
+            $table->decimal('tax_amount', 10, 2)->default(0)->after('tax_rate');
         });
     }
 
@@ -30,6 +36,12 @@ return new class extends Migration
                 'contact_number',
                 'terms',
                 'due_date',
+                'discount_type',
+                'discount_value',
+                'discount_amount',
+                'tax_type',
+                'tax_rate',
+                'tax_amount',
             ]);
         });
     }

@@ -88,6 +88,29 @@
                     <x-mary-textarea label="Notes" wire:model="notes"
                         placeholder="Additional notes for this purchase order" />
 
+                    {{-- Billing Section --}}
+                    <div>
+                        <h3 class="mb-3 text-lg font-semibold">Discounts & Taxes</h3>
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <x-mary-select label="Purchase Discount" :options="[
+                                ['value' => 'regular', 'label' => 'Regular Discount'],
+                                ['value' => 'senior', 'label' => 'Senior Citizen Discount'],
+                                ['value' => 'pwd', 'label' => 'PWD Discount'],
+                            ]" wire:model.live="discount_type" option-value="value" option-label="label" />
+
+                            <x-mary-input label="Discount Rate (%)" wire:model.live="discount_value" type="number"
+                                step="0.01" min="0" max="100"
+                                :disabled="in_array($discount_type, ['senior', 'pwd'], true)" />
+
+                            <x-mary-select label="Tax Rate" :options="[
+                                ['value' => 'vat_12', 'label' => 'VAT (12%)'],
+                                ['value' => 'ewt_sales_1', 'label' => 'EWT (1% on sales)'],
+                                ['value' => 'ewt_service_2', 'label' => 'EWT (2% on services)'],
+                                ['value' => 'none', 'label' => 'No Tax'],
+                            ]" wire:model.live="tax_type" option-value="value" option-label="label" />
+                        </div>
+                    </div>
+
                     {{-- Items Section --}}
                     <div>
                         <div class="flex items-center justify-between mb-4">
@@ -127,7 +150,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="font-medium">
-                                                        â‚±{{ number_format(($item['quantity'] ?? 0) * ($item['unit_cost'] ?? 0), 2) }}
+                                                        PHP {{ number_format(($item['quantity'] ?? 0) * ($item['unit_cost'] ?? 0), 2) }}
                                                     </div>
                                                 </td>
                                                 <td>
@@ -139,9 +162,25 @@
                                         @endforeach
                                     </tbody>
                                     <tfoot>
+                                        @php $billing = $this->calculateBilling(); @endphp
+                                        <tr>
+                                            <td colspan="3" class="text-right">Subtotal:</td>
+                                            <td>PHP {{ number_format($billing['subtotal'], 2) }}</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-right">{{ $this->discountLabel() }}:</td>
+                                            <td>PHP {{ number_format($billing['discount_amount'], 2) }}</td>
+                                            <td></td>
+                                        </tr>
+                                        <tr>
+                                            <td colspan="3" class="text-right">{{ $this->taxLabel() }}:</td>
+                                            <td>PHP {{ number_format($billing['tax_amount'], 2) }}</td>
+                                            <td></td>
+                                        </tr>
                                         <tr class="font-bold">
                                             <td colspan="3" class="text-right">Total Amount:</td>
-                                            <td>â‚±{{ number_format(collect($items)->sum(fn($item) => ($item['quantity'] ?? 0) * ($item['unit_cost'] ?? 0)), 2) }}
+                                            <td>PHP {{ number_format($billing['total'], 2) }}
                                             </td>
                                             <td></td>
                                         </tr>
@@ -239,7 +278,7 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="font-medium">₱{{ number_format($po->total_amount, 2) }}</div>
+                                <div class="font-medium">PHP {{ number_format($po->total_amount, 2) }}</div>
                             </td>
                             <td>
                                 <x-mary-badge value="{{ ucfirst($po->status) }}"
@@ -451,7 +490,15 @@
                             <div class="flex justify-between">
                                 <span class="font-medium">Total Amount:</span>
                                 <span
-                                    class="text-lg font-bold">₱{{ number_format($viewingPO->total_amount, 2) }}</span>
+                                    class="text-lg font-bold">PHP {{ number_format($viewingPO->total_amount, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium">Discount:</span>
+                                <span>{{ ucfirst($viewingPO->discount_type ?? 'regular') }} - PHP {{ number_format($viewingPO->discount_amount ?? 0, 2) }}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="font-medium">Tax:</span>
+                                <span>{{ $this->taxLabel($viewingPO->tax_type ?? 'none') }} - PHP {{ number_format($viewingPO->tax_amount ?? 0, 2) }}</span>
                             </div>
                         </div>
                     </x-mary-card>
@@ -520,8 +567,8 @@
                                         <td>{{ $item->quantity_ordered }}</td>
                                         <td>{{ $item->quantity_received }}</td>
                                         <td>{{ $item->quantity_pending }}</td>
-                                        <td>₱{{ number_format($item->unit_cost, 2) }}</td>
-                                        <td>₱{{ number_format($item->total_cost, 2) }}</td>
+                                        <td>PHP {{ number_format($item->unit_cost, 2) }}</td>
+                                        <td>PHP {{ number_format($item->total_cost, 2) }}</td>
                                         <td>
                                             @if ($item->quantity_received >= $item->quantity_ordered)
                                                 <x-mary-badge value="Complete" class="badge-success" />
@@ -537,7 +584,7 @@
                             <tfoot>
                                 <tr class="font-bold">
                                     <td colspan="5" class="text-right">Total:</td>
-                                    <td>₱{{ number_format($viewingPO->items->sum('total_cost'), 2) }}</td>
+                                    <td>PHP {{ number_format($viewingPO->items->sum('total_cost'), 2) }}</td>
                                     <td></td>
                                 </tr>
                             </tfoot>

@@ -40,8 +40,27 @@
     <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-12">
         {{-- Left Panel - Product Search & Cart --}}
         <div class="space-y-4 lg:col-span-8">
+            <x-mary-card title="{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}"
+                class="{{ !$currentShift ? 'opacity-50' : '' }}">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <x-mary-select label="Invoice Type" :options="[
+                        ['value' => 'sales', 'label' => 'Sales Invoice'],
+                        ['value' => 'service', 'label' => 'Service Invoice'],
+                    ]" wire:model.live="invoiceType" option-label="label" option-value="value"
+                        :disabled="!$currentShift" />
+
+                    <x-mary-select label="Tax Rate" :options="[
+                        ['value' => 'vat_12', 'label' => 'VAT (12%)'],
+                        ['value' => 'ewt_sales_1', 'label' => 'EWT (1% on sales)'],
+                        ['value' => 'ewt_service_2', 'label' => 'EWT (2% on services)'],
+                        ['value' => 'none', 'label' => 'No Tax'],
+                    ]" wire:model.live="taxType" option-label="label" option-value="value"
+                        :disabled="!$currentShift" />
+                </div>
+            </x-mary-card>
+
             {{-- Product Search --}}
-            <x-mary-card title="Product Search" class="{{ !$currentShift ? 'opacity-50' : '' }}">
+            <x-mary-card title="Invoice Items" class="{{ !$currentShift ? 'opacity-50' : '' }}">
                 <div class="space-y-4">
                     {{-- Search Input --}}
                     <div class="flex gap-2">
@@ -136,9 +155,9 @@
             </x-mary-card>
             {{-- Shopping Cart --}}
             <x-mary-card class="{{ !$currentShift ? 'opacity-50' : '' }}">
-                {{-- Shopping Cart Header with Bulk Actions --}}
+                {{-- Invoice Cart Header with Bulk Actions --}}
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">Shopping Cart ({{ count($cartItems) }} items)</h3>
+                    <h3 class="text-lg font-semibold">Invoice Cart ({{ count($cartItems) }} items)</h3>
                     @if (count($cartItems) > 0)
                         <x-mary-button icon="o-currency-dollar" wire:click="openBulkPriceSelection"
                             class="btn-xs btn-outline" :disabled="!$currentShift" label="Bulk Price" />
@@ -259,9 +278,9 @@
                         <div class="flex gap-2 pt-4 border-t">
                             <x-mary-button label="Clear Cart" wire:click="clearCart" class="btn-ghost btn-sm"
                                 :disabled="!$currentShift" />
-                            <x-mary-button label="Hold Sale" wire:click="openHoldSaleModal"
+                            <x-mary-button label="Hold Invoice" wire:click="openHoldSaleModal"
                                 class="btn-warning btn-sm" :disabled="!$currentShift" />
-                            <x-mary-button label="Held Sales" wire:click="openHeldSalesModal" class="btn-info btn-sm"
+                            <x-mary-button label="Held Invoices" wire:click="openHeldSalesModal" class="btn-info btn-sm"
                                 :disabled="!$currentShift" />
                         </div>
                     </div>
@@ -272,7 +291,7 @@
                         <p class="text-sm text-base-400">
                             {{ $currentShift ? 'Search for products or services to add to cart' : 'Start a shift to begin adding items' }}
                         </p>
-                        <x-mary-button label="Held Sales" wire:click="openHeldSalesModal" class="btn-info btn-sm"
+                        <x-mary-button label="Held Invoices" wire:click="openHeldSalesModal" class="btn-info btn-sm"
                             :disabled="!$currentShift" />
                     </div>
                 @endif
@@ -323,6 +342,10 @@
             <x-mary-card title="Order Summary" class="{{ !$currentShift ? 'opacity-50' : '' }}">
                 <div class="space-y-3">
                     <div class="flex justify-between">
+                        <span>Invoice Type:</span>
+                        <span class="font-medium">{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}</span>
+                    </div>
+                    <div class="flex justify-between">
                         <span>Subtotal:</span>
                         <span class="font-medium">₱{{ number_format($subtotal, 2) }}</span>
                     </div>
@@ -335,7 +358,7 @@
                     @endif
 
                     <div class="flex justify-between">
-                        <span>Tax ({{ $taxRate * 100 }}%):</span>
+                        <span>{{ $this->taxLabel() }}:</span>
                         <span class="font-medium">₱{{ number_format($taxAmount, 2) }}</span>
                     </div>
 
@@ -474,12 +497,16 @@
 
     {{-- Payment Modal --}}
     {{-- Enhanced Payment Modal with Additional Change Features --}}
-    <x-mary-modal wire:model="showPaymentModal" title="Process Payment" subtitle="Complete the sale transaction">
+    <x-mary-modal wire:model="showPaymentModal" title="Process Payment" subtitle="Complete the invoice transaction">
         <div class="space-y-4">
             {{-- Order Summary --}}
             <div class="p-4 rounded-lg bg-base-200">
                 <h4 class="mb-3 font-semibold">Order Summary</h4>
                 <div class="space-y-2 text-sm">
+                    <div class="flex justify-between">
+                        <span>Invoice Type:</span>
+                        <span>{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}</span>
+                    </div>
                     <div class="flex justify-between">
                         <span>Subtotal:</span>
                         <span>₱{{ number_format($subtotal, 2) }}</span>
@@ -491,7 +518,7 @@
                         </div>
                     @endif
                     <div class="flex justify-between">
-                        <span>Tax:</span>
+                        <span>{{ $this->taxLabel() }}:</span>
                         <span>₱{{ number_format($taxAmount, 2) }}</span>
                     </div>
                     <div class="flex justify-between pt-2 text-lg font-bold border-t">
@@ -569,7 +596,7 @@
 
         <x-slot:actions>
             <x-mary-button label="Cancel" wire:click="$set('showPaymentModal', false)" />
-            <x-mary-button label="Complete Sale" wire:click="completeSale" class="btn-success" :disabled="$paidAmount < $totalAmount" />
+            <x-mary-button label="Complete Invoice" wire:click="completeSale" class="btn-success" :disabled="$paidAmount < $totalAmount" />
         </x-slot:actions>
     </x-mary-modal>
 
@@ -751,7 +778,7 @@
                         <div class="flex justify-between">
                             <span>Current Discount:</span>
                             <span class="font-semibold">
-                                {{ $discountType === 'percentage' ? $discountValue . '%' : '₱' . number_format($discountValue, 2) }}
+                                {{ $this->discountLabel() }}
                                 = -₱{{ number_format($discountAmount, 2) }}
                             </span>
                         </div>
@@ -760,19 +787,22 @@
             @endif
 
             <x-mary-select label="Discount Type" :options="[
+                ['id' => 'senior', 'name' => 'Senior Citizen Discount (20%)'],
+                ['id' => 'pwd', 'name' => 'PWD Discount (20%)'],
                 ['id' => 'percentage', 'name' => 'Percentage (%)'],
                 ['id' => 'fixed', 'name' => 'Fixed Amount (₱)'],
             ]" wire:model.live="discountType" />
 
             <x-mary-input label="Discount Value" wire:model.live="discountValue" type="number" step="0.01"
-                placeholder="{{ $discountType === 'percentage' ? 'Enter percentage (e.g., 10)' : 'Enter amount (e.g., 100.00)' }}" />
+                placeholder="{{ in_array($discountType, ['percentage', 'senior', 'pwd'], true) ? 'Enter percentage (e.g., 10)' : 'Enter amount (e.g., 100.00)' }}"
+                :disabled="in_array($discountType, ['senior', 'pwd'], true)" />
 
-            @if ($discountValue && is_numeric($discountValue))
+            @if (in_array($discountType, ['senior', 'pwd'], true) || ($discountValue && is_numeric($discountValue)))
                 <div class="p-3 rounded-lg bg-info/10">
                     <div class="text-center">
                         <div class="text-lg font-bold text-info">
                             Preview:
-                            -₱{{ number_format($discountType === 'percentage' ? $subtotal * ($discountValue / 100) : min($discountValue, $subtotal), 2) }}
+                            -₱{{ number_format($this->calculateDiscountAmount(), 2) }}
                         </div>
                     </div>
                 </div>

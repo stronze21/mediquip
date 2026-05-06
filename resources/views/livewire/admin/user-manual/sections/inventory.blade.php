@@ -135,7 +135,7 @@
                     </div>
                     <div class="flex justify-between text-sm">
                         <span>Adjustments</span>
-                        <span class="text-warning">± Manual Changes</span>
+                        <span class="text-warning">Â± Manual Changes</span>
                     </div>
                 </div>
             </div>
@@ -208,7 +208,7 @@
     <div class="mb-6 alert alert-success">
         <x-mary-icon name="o-qr-code" class="w-6 h-6" />
         <div>
-            <strong>Barcode Scanning:</strong> Use F4 in POS or product management to activate barcode scanner mode.
+            <strong>Barcode Scanning:</strong> Use F4 in Invoice or product management to activate barcode scanner mode.
         </div>
     </div>
 
@@ -275,7 +275,7 @@
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div class="card bg-success text-success-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✓ Do This</h4>
+                <h4 class="card-title">âœ“ Do This</h4>
                 <ul class="space-y-1 text-sm">
                     <li>Use consistent SKU naming</li>
                     <li>Set realistic minimum stock levels</li>
@@ -287,7 +287,7 @@
         </div>
         <div class="card bg-error text-error-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✗ Avoid This</h4>
+                <h4 class="card-title">âœ— Avoid This</h4>
                 <ul class="space-y-1 text-sm">
                     <li>Duplicate SKUs</li>
                     <li>Setting minimum stock too low</li>

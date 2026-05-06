@@ -107,6 +107,16 @@
                                                 class="flex items-center gap-2">
                                                 <x-heroicon-o-printer class="w-4 h-4" /> Print Invoice</a></li>
                                         @if ($sale->status === 'completed')
+                                            <li><a href="{{ route('invoice.e-invoice.json', $sale->id) }}"
+                                                    class="flex items-center gap-2">
+                                                    <x-heroicon-o-document-arrow-down class="w-4 h-4" /> E Invoice
+                                                    JSON</a></li>
+                                            <li><a href="{{ route('invoice.e-invoice.xml', $sale->id) }}"
+                                                    class="flex items-center gap-2">
+                                                    <x-heroicon-o-code-bracket-square class="w-4 h-4" /> E Invoice
+                                                    XML</a></li>
+                                        @endif
+                                        @if ($sale->status === 'completed')
                                             <li><a wire:click="refundSale({{ $sale->id }})"
                                                     wire:confirm="Are you sure you want to refund this sale?"
                                                     class="text-error">

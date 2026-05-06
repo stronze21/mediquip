@@ -1,5 +1,5 @@
 <div class="prose prose-lg max-w-none">
-    <h2 class="mb-6 text-2xl font-bold text-base-content">Sales & Point of Sale (POS)</h2>
+    <h2 class="mb-6 text-2xl font-bold text-base-content">Sales & Invoice</h2>
 
     <div class="mb-6 alert alert-info">
         <x-mary-icon name="o-information-circle" class="w-6 h-6" />
@@ -16,9 +16,9 @@
         </div>
     </div>
 
-    <h3 class="mb-4 text-xl font-semibold text-base-content">Point of Sale (POS) Interface</h3>
+    <h3 class="mb-4 text-xl font-semibold text-base-content">Invoice Interface</h3>
     <p class="mb-4 text-base-content/80">
-        Navigate to <strong>Sales > Point of Sale</strong> to access the main selling interface.
+        Navigate to <strong>Sales > Invoice</strong> to access the main selling interface.
     </p>
 
     <div class="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-2">
@@ -26,7 +26,7 @@
             <div class="p-6 card-body">
                 <h4 class="mb-4 text-lg card-title">
                     <x-mary-icon name="o-shopping-cart" class="w-5 h-5 text-primary" />
-                    POS Layout
+                    Invoice Layout
                 </h4>
                 <div class="space-y-3">
                     <div class="flex items-center justify-between p-2 rounded bg-base-200">
@@ -143,9 +143,9 @@
         </div>
     </div>
 
-    <h3 class="mb-4 text-xl font-semibold text-base-content">POS Keyboard Shortcuts</h3>
+    <h3 class="mb-4 text-xl font-semibold text-base-content">Invoice Keyboard Shortcuts</h3>
     <p class="mb-4 text-base-content/80">
-        The Point of Sale system includes keyboard shortcuts for faster operation and improved cashier efficiency.
+        The Invoice system includes keyboard shortcuts for faster operation and improved cashier efficiency.
     </p>
 
     <div class="mb-6 shadow-sm card bg-base-100">
@@ -213,12 +213,12 @@
                     Quick Workflow Tips
                 </h4>
                 <ul class="space-y-1 text-sm text-base-content/80">
-                    <li>• Use <kbd class="kbd kbd-xs">F1</kbd> to quickly scan barcodes</li>
-                    <li>• Press <kbd class="kbd kbd-xs">F2</kbd> when ready to take payment</li>
-                    <li>• Hold sales with <kbd class="kbd kbd-xs">F4</kbd> for busy periods</li>
-                    <li>• Access held sales anytime with <kbd class="kbd kbd-xs">F5</kbd></li>
-                    <li>• Clear mistakes quickly with <kbd class="kbd kbd-xs">F3</kbd></li>
-                    <li>• Close dialogs instantly with <kbd class="kbd kbd-xs">Esc</kbd></li>
+                    <li>â€¢ Use <kbd class="kbd kbd-xs">F1</kbd> to quickly scan barcodes</li>
+                    <li>â€¢ Press <kbd class="kbd kbd-xs">F2</kbd> when ready to take payment</li>
+                    <li>â€¢ Hold sales with <kbd class="kbd kbd-xs">F4</kbd> for busy periods</li>
+                    <li>â€¢ Access held sales anytime with <kbd class="kbd kbd-xs">F5</kbd></li>
+                    <li>â€¢ Clear mistakes quickly with <kbd class="kbd kbd-xs">F3</kbd></li>
+                    <li>â€¢ Close dialogs instantly with <kbd class="kbd kbd-xs">Esc</kbd></li>
                 </ul>
             </div>
         </div>
@@ -230,13 +230,13 @@
                     Best Practices
                 </h4>
                 <ul class="space-y-1 text-sm text-base-content/80">
-                    <li>• Learn shortcuts gradually - start with <kbd class="kbd kbd-xs">F1</kbd> and <kbd
+                    <li>â€¢ Learn shortcuts gradually - start with <kbd class="kbd kbd-xs">F1</kbd> and <kbd
                             class="kbd kbd-xs">F2</kbd></li>
-                    <li>• Use barcode scanner for speed and accuracy</li>
-                    <li>• Hold sales during rush hours to serve multiple customers</li>
-                    <li>• Always confirm before clearing cart</li>
-                    <li>• Use Esc to cancel unwanted actions</li>
-                    <li>• Practice shortcuts during quiet periods</li>
+                    <li>â€¢ Use barcode scanner for speed and accuracy</li>
+                    <li>â€¢ Hold sales during rush hours to serve multiple customers</li>
+                    <li>â€¢ Always confirm before clearing cart</li>
+                    <li>â€¢ Use Esc to cancel unwanted actions</li>
+                    <li>â€¢ Practice shortcuts during quiet periods</li>
                 </ul>
             </div>
         </div>
@@ -245,7 +245,7 @@
     <div class="mb-6 alert alert-success">
         <x-mary-icon name="o-light-bulb" class="w-6 h-6" />
         <div>
-            <strong>Pro Tip:</strong> The POS system shows visual shortcuts on buttons. Look for small key indicators in
+            <strong>Pro Tip:</strong> The Invoice system shows visual shortcuts on buttons. Look for small key indicators in
             the corners of buttons to remember which shortcut does what!
         </div>
     </div>
@@ -272,21 +272,21 @@
                 <div>
                     <h5 class="mb-2 font-semibold text-success">When to Hold Sales:</h5>
                     <ul class="space-y-1 text-sm">
-                        <li>• Customer needs to get more items</li>
-                        <li>• Waiting for price check</li>
-                        <li>• Customer forgot payment method</li>
-                        <li>• Need to serve urgent customer</li>
-                        <li>• Complex transaction in progress</li>
+                        <li>â€¢ Customer needs to get more items</li>
+                        <li>â€¢ Waiting for price check</li>
+                        <li>â€¢ Customer forgot payment method</li>
+                        <li>â€¢ Need to serve urgent customer</li>
+                        <li>â€¢ Complex transaction in progress</li>
                     </ul>
                 </div>
                 <div>
                     <h5 class="mb-2 font-semibold text-info">Hold Sales Benefits:</h5>
                     <ul class="space-y-1 text-sm">
-                        <li>• Serve multiple customers efficiently</li>
-                        <li>• No lost sales during interruptions</li>
-                        <li>• Maintain customer service quality</li>
-                        <li>• Handle complex orders better</li>
-                        <li>• Reduce customer wait times</li>
+                        <li>â€¢ Serve multiple customers efficiently</li>
+                        <li>â€¢ No lost sales during interruptions</li>
+                        <li>â€¢ Maintain customer service quality</li>
+                        <li>â€¢ Handle complex orders better</li>
+                        <li>â€¢ Reduce customer wait times</li>
                     </ul>
                 </div>
             </div>
@@ -319,10 +319,10 @@
                     Customer Benefits
                 </h4>
                 <div class="space-y-2 text-sm">
-                    <div>• Purchase history tracking</div>
-                    <div>• Warranty information</div>
-                    <div>• Special pricing tiers</div>
-                    <div>• Return/exchange tracking</div>
+                    <div>â€¢ Purchase history tracking</div>
+                    <div>â€¢ Warranty information</div>
+                    <div>â€¢ Special pricing tiers</div>
+                    <div>â€¢ Return/exchange tracking</div>
                 </div>
             </div>
         </div>
@@ -400,11 +400,11 @@
             <div class="p-4 card-body">
                 <h4 class="text-lg card-title">Return Reasons</h4>
                 <ul class="space-y-1 text-sm text-base-content/80">
-                    <li>• Defective product</li>
-                    <li>• Wrong item ordered</li>
-                    <li>• Customer changed mind</li>
-                    <li>• Warranty claim</li>
-                    <li>• Damaged in transit</li>
+                    <li>â€¢ Defective product</li>
+                    <li>â€¢ Wrong item ordered</li>
+                    <li>â€¢ Customer changed mind</li>
+                    <li>â€¢ Warranty claim</li>
+                    <li>â€¢ Damaged in transit</li>
                 </ul>
             </div>
         </div>
@@ -412,11 +412,11 @@
             <div class="p-4 card-body">
                 <h4 class="text-lg card-title">Return Actions</h4>
                 <ul class="space-y-1 text-sm text-base-content/80">
-                    <li>• Return to stock</li>
-                    <li>• Mark as damaged</li>
-                    <li>• Exchange for different item</li>
-                    <li>• Refund customer</li>
-                    <li>• Supplier return</li>
+                    <li>â€¢ Return to stock</li>
+                    <li>â€¢ Mark as damaged</li>
+                    <li>â€¢ Exchange for different item</li>
+                    <li>â€¢ Refund customer</li>
+                    <li>â€¢ Supplier return</li>
                 </ul>
             </div>
         </div>
@@ -488,11 +488,11 @@
             <div class="p-4 card-body">
                 <h4 class="text-lg card-title">System Receipt Features</h4>
                 <ul class="space-y-1 text-sm text-base-content/80">
-                    <li>• Detailed item breakdown</li>
-                    <li>• Payment information</li>
-                    <li>• Customer details</li>
-                    <li>• Cashier and timestamp</li>
-                    <li>• Clear "Draft" labeling</li>
+                    <li>â€¢ Detailed item breakdown</li>
+                    <li>â€¢ Payment information</li>
+                    <li>â€¢ Customer details</li>
+                    <li>â€¢ Cashier and timestamp</li>
+                    <li>â€¢ Clear "Draft" labeling</li>
                 </ul>
             </div>
         </div>
@@ -500,11 +500,11 @@
             <div class="p-4 card-body">
                 <h4 class="text-lg card-title">Receipt Actions</h4>
                 <ul class="space-y-1 text-sm text-base-content/80">
-                    <li>• Print immediately after sale</li>
-                    <li>• Reprint from sales history</li>
-                    <li>• Email to customer</li>
-                    <li>• Export to PDF</li>
-                    <li>• Include in reports</li>
+                    <li>â€¢ Print immediately after sale</li>
+                    <li>â€¢ Reprint from sales history</li>
+                    <li>â€¢ Email to customer</li>
+                    <li>â€¢ Export to PDF</li>
+                    <li>â€¢ Include in reports</li>
                 </ul>
             </div>
         </div>
@@ -514,27 +514,27 @@
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div class="card bg-success text-success-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✓ Do This</h4>
+                <h4 class="card-title">âœ“ Do This</h4>
                 <ul class="space-y-1 text-sm">
-                    <li>• Always verify product and quantity</li>
-                    <li>• Double-check payment amounts</li>
-                    <li>• Issue BIR receipts manually</li>
-                    <li>• Record customer information when possible</li>
-                    <li>• Process returns promptly</li>
-                    <li>• Open and close shifts properly</li>
+                    <li>â€¢ Always verify product and quantity</li>
+                    <li>â€¢ Double-check payment amounts</li>
+                    <li>â€¢ Issue BIR receipts manually</li>
+                    <li>â€¢ Record customer information when possible</li>
+                    <li>â€¢ Process returns promptly</li>
+                    <li>â€¢ Open and close shifts properly</li>
                 </ul>
             </div>
         </div>
         <div class="card bg-error text-error-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✗ Avoid This</h4>
+                <h4 class="card-title">âœ— Avoid This</h4>
                 <ul class="space-y-1 text-sm">
-                    <li>• Using system receipts as official receipts</li>
-                    <li>• Processing sales without inventory</li>
-                    <li>• Ignoring return policies</li>
-                    <li>• Leaving shifts open overnight</li>
-                    <li>• Manual price overrides without reason</li>
-                    <li>• Processing returns without verification</li>
+                    <li>â€¢ Using system receipts as official receipts</li>
+                    <li>â€¢ Processing sales without inventory</li>
+                    <li>â€¢ Ignoring return policies</li>
+                    <li>â€¢ Leaving shifts open overnight</li>
+                    <li>â€¢ Manual price overrides without reason</li>
+                    <li>â€¢ Processing returns without verification</li>
                 </ul>
             </div>
         </div>

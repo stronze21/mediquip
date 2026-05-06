@@ -40,6 +40,12 @@ class PurchaseOrderManagement extends Component
     public $due_date = '';
     public $notes = '';
     public $items = [];
+    public $discount_type = 'regular';
+    public $discount_value = 0;
+    public $discount_amount = 0;
+    public $tax_type = 'vat_12';
+    public $tax_rate = 12;
+    public $tax_amount = 0;
 
     // Receiving fields
     public $receivingItems = [];
@@ -64,6 +70,9 @@ class PurchaseOrderManagement extends Component
         'terms' => 'nullable|string|max:255',
         'due_date' => 'nullable|date|after_or_equal:order_date',
         'notes' => 'nullable|string',
+        'discount_type' => 'required|in:regular,senior,pwd',
+        'discount_value' => 'nullable|numeric|min:0|max:100',
+        'tax_type' => 'required|in:none,vat_12,ewt_sales_1,ewt_service_2',
         'items' => 'required|array|min:1',
         'items.*.product_id' => 'required|exists:products,id',
         'items.*.quantity' => 'required|integer|min:1',
@@ -249,6 +258,12 @@ class PurchaseOrderManagement extends Component
         $this->terms = $po->terms ?? '';
         $this->due_date = $po->due_date?->format('Y-m-d') ?? '';
         $this->notes = $po->notes ?? '';
+        $this->discount_type = $po->discount_type ?? 'regular';
+        $this->discount_value = (float) ($po->discount_value ?? 0);
+        $this->discount_amount = (float) ($po->discount_amount ?? 0);
+        $this->tax_type = $po->tax_type ?? 'vat_12';
+        $this->tax_rate = (float) ($po->tax_rate ?? $this->taxRateForType($this->tax_type));
+        $this->tax_amount = (float) ($po->tax_amount ?? 0);
 
         $this->items = $po->items->map(function ($item) {
             return [
@@ -279,6 +294,26 @@ class PurchaseOrderManagement extends Component
         $this->items = array_values($this->items);
     }
 
+    public function updatedDiscountType(): void
+    {
+        if (in_array($this->discount_type, ['senior', 'pwd'], true)) {
+            $this->discount_value = 20;
+        }
+
+        $this->recalculateBilling();
+    }
+
+    public function updatedDiscountValue(): void
+    {
+        $this->recalculateBilling();
+    }
+
+    public function updatedTaxType(): void
+    {
+        $this->tax_rate = $this->taxRateForType($this->tax_type);
+        $this->recalculateBilling();
+    }
+
     public function save($submit = false)
     {
         $this->validate();
@@ -286,14 +321,20 @@ class PurchaseOrderManagement extends Component
         try {
             \DB::beginTransaction();
 
-            $totalAmount = collect($this->items)->sum(fn($item) => $item['quantity'] * $item['unit_cost']);
+            $billing = $this->calculateBilling();
 
             $data = [
                 'supplier_id' => $this->supplier_id,
                 'warehouse_id' => $this->warehouse_id,
                 'requested_by' => auth()->id(),
                 'status' => $submit ? 'pending' : 'draft',
-                'total_amount' => $totalAmount,
+                'total_amount' => $billing['total'],
+                'discount_type' => $this->discount_type,
+                'discount_value' => $billing['discount_value'],
+                'discount_amount' => $billing['discount_amount'],
+                'tax_type' => $this->tax_type,
+                'tax_rate' => $billing['tax_rate'],
+                'tax_amount' => $billing['tax_amount'],
                 'order_date' => $this->order_date,
                 'expected_date' => $this->expected_date,
                 'tin' => $this->tin,
@@ -607,10 +648,78 @@ class PurchaseOrderManagement extends Component
             'terms',
             'due_date',
             'notes',
+            'discount_type',
+            'discount_value',
+            'discount_amount',
+            'tax_type',
+            'tax_rate',
+            'tax_amount',
             'items'
         ]);
         $this->order_date = now()->format('Y-m-d');
         $this->expected_date = now()->addDays(7)->format('Y-m-d');
+        $this->discount_type = 'regular';
+        $this->discount_value = 0;
+        $this->discount_amount = 0;
+        $this->tax_type = 'vat_12';
+        $this->tax_rate = 12;
+        $this->tax_amount = 0;
+    }
+
+    public function calculateBilling(): array
+    {
+        $subtotal = collect($this->items)->sum(fn($item) => (float) ($item['quantity'] ?? 0) * (float) ($item['unit_cost'] ?? 0));
+        $discountValue = in_array($this->discount_type, ['senior', 'pwd'], true) ? 20 : (float) $this->discount_value;
+        $discountAmount = $subtotal * ($discountValue / 100);
+        $taxRate = $this->taxRateForType($this->tax_type);
+        $taxableAmount = max(0, $subtotal - $discountAmount);
+        $taxAmount = $taxableAmount * ($taxRate / 100);
+
+        return [
+            'subtotal' => $subtotal,
+            'discount_value' => $discountValue,
+            'discount_amount' => $discountAmount,
+            'tax_rate' => $taxRate,
+            'tax_amount' => $taxAmount,
+            'total' => $taxableAmount + $taxAmount,
+        ];
+    }
+
+    public function recalculateBilling(): void
+    {
+        $billing = $this->calculateBilling();
+        $this->discount_amount = $billing['discount_amount'];
+        $this->tax_rate = $billing['tax_rate'];
+        $this->tax_amount = $billing['tax_amount'];
+    }
+
+    public function discountLabel(): string
+    {
+        return match ($this->discount_type) {
+            'senior' => 'Senior Citizen Discount (20%)',
+            'pwd' => 'PWD Discount (20%)',
+            default => 'Regular Discount (' . (float) $this->discount_value . '%)',
+        };
+    }
+
+    public function taxRateForType(string $type): float
+    {
+        return match ($type) {
+            'vat_12' => 12,
+            'ewt_sales_1' => 1,
+            'ewt_service_2' => 2,
+            default => 0,
+        };
+    }
+
+    public function taxLabel(?string $type = null): string
+    {
+        return match ($type ?? $this->tax_type) {
+            'vat_12' => 'VAT (12%)',
+            'ewt_sales_1' => 'EWT (1% on sales)',
+            'ewt_service_2' => 'EWT (2% on services)',
+            default => 'No Tax',
+        };
     }
 
     /**

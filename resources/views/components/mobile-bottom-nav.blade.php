@@ -11,7 +11,7 @@
             <span>Home</span>
         </a>
 
-        {{-- Point of Sale --}}
+        {{-- Invoice --}}
         <a href="{{ route('sales.pos') }}"
             class="flex flex-col items-center justify-center text-xs {{ request()->routeIs('sales.pos*') ? 'text-primary' : 'text-base-content/60' }}">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -19,7 +19,7 @@
                     d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6">
                 </path>
             </svg>
-            <span>POS</span>
+            <span>Invoice</span>
         </a>
 
         {{-- Inventory (with dropdown trigger) --}}

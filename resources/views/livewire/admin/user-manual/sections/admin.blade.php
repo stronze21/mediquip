@@ -67,7 +67,7 @@
                 </tr>
                 <tr>
                     <td><span class="badge badge-info">Cashier</span></td>
-                    <td>POS, sales history, customer management</td>
+                    <td>Invoice, sales history, customer management</td>
                     <td>Sales staff, front desk personnel</td>
                 </tr>
                 <tr>
@@ -576,7 +576,7 @@
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div class="card bg-success text-success-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✓ Do This</h4>
+                <h4 class="card-title">âœ“ Do This</h4>
                 <ul class="space-y-1 text-sm">
                     <li>Regular backup verification</li>
                     <li>Monitor system performance daily</li>
@@ -591,7 +591,7 @@
         </div>
         <div class="card bg-error text-error-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✗ Avoid This</h4>
+                <h4 class="card-title">âœ— Avoid This</h4>
                 <ul class="space-y-1 text-sm">
                     <li>Sharing admin passwords</li>
                     <li>Skipping backup verification</li>

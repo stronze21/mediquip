@@ -379,7 +379,7 @@
                 <tr>
                     <td>Lead Time Consistency</td>
                     <td>Actual vs. promised delivery time</td>
-                    <td>±1 day</td>
+                    <td>Â±1 day</td>
                 </tr>
                 <tr>
                     <td>Price Competitiveness</td>
@@ -502,7 +502,7 @@
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div class="card bg-success text-success-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✓ Do This</h4>
+                <h4 class="card-title">âœ“ Do This</h4>
                 <ul class="space-y-1 text-sm">
                     <li>Maintain accurate supplier information</li>
                     <li>Set realistic lead times</li>
@@ -510,15 +510,15 @@
                     <li>Monitor supplier performance</li>
                     <li>Use templates for regular orders</li>
                     <li>Document receiving discrepancies</li>
-                    <li>Review and approve POs before sending</li>
+                    <li>Review and approve Invoice before sending</li>
                 </ul>
             </div>
         </div>
         <div class="card bg-error text-error-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✗ Avoid This</h4>
+                <h4 class="card-title">âœ— Avoid This</h4>
                 <ul class="space-y-1 text-sm">
-                    <li>Creating POs without checking inventory</li>
+                    <li>Creating Invoice without checking inventory</li>
                     <li>Ignoring supplier performance issues</li>
                     <li>Accepting damaged goods without documentation</li>
                     <li>Manual inventory updates</li>

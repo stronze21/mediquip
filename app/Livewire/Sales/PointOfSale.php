@@ -39,6 +39,7 @@ class PointOfSale extends Component
     public $selectedWarehouse = '';
     public $paymentMethod = 'cash';
     public $saleNotes = '';
+    public $invoiceType = 'sales';
 
     // UI state
     public $showCustomerModal = false;
@@ -60,7 +61,7 @@ class PointOfSale extends Component
     public $holdNotes = '';
 
     // Discount fields
-    public $discountType = 'percentage'; // percentage or fixed
+    public $discountType = 'percentage'; // percentage, fixed, senior, or pwd
     public $discountValue = '';
 
     // Customer search
@@ -76,8 +77,9 @@ class PointOfSale extends Component
     public $openingCash = '';
     public $openingNotes = '';
 
-    // Tax rate (configurable)
-    public $taxRate = 0; // 12% VAT
+    // Tax fields
+    public $taxType = 'vat_12';
+    public $taxRate = 12;
 
     public $showHeldSalesModal = false;
     public $heldSales = [];
@@ -133,7 +135,42 @@ class PointOfSale extends Component
         return view('livewire.sales.point-of-sale', [
             'warehouses' => $warehouses,
             'customers' => $customers,
-        ])->layout('layouts.pos', ['title' => 'Point of Sale']);
+        ])->layout('layouts.pos', ['title' => 'Invoice']);
+    }
+
+    public function updatedInvoiceType($type)
+    {
+        $this->invoiceType = in_array($type, ['sales', 'service'], true) ? $type : 'sales';
+        $this->taxType = $this->invoiceType === 'service' ? 'ewt_service_2' : 'vat_12';
+        $this->updatedTaxType($this->taxType);
+        $this->updateCartTotals();
+    }
+
+    public function updatedTaxType($type)
+    {
+        $this->taxType = in_array($type, ['none', 'vat_12', 'ewt_sales_1', 'ewt_service_2'], true) ? $type : 'vat_12';
+        $this->taxRate = $this->taxRateForType($this->taxType);
+        $this->updateCartTotals();
+    }
+
+    public function taxRateForType(string $type): float
+    {
+        return match ($type) {
+            'vat_12' => 12,
+            'ewt_sales_1' => 1,
+            'ewt_service_2' => 2,
+            default => 0,
+        };
+    }
+
+    public function taxLabel(): string
+    {
+        return match ($this->taxType) {
+            'vat_12' => 'VAT (12%)',
+            'ewt_sales_1' => 'EWT (1% on sales)',
+            'ewt_service_2' => 'EWT (2% on services)',
+            default => 'No Tax',
+        };
     }
 
     public function addToCart($productId)
@@ -702,21 +739,16 @@ class PointOfSale extends Component
     public function recalculateDiscount()
     {
         // Only recalculate if there's an active discount
-        if ($this->discountAmount > 0 && $this->discountValue > 0) {
-            if ($this->discountType === 'percentage') {
-                $this->discountAmount = $this->subtotal * ($this->discountValue / 100);
-            } else {
-                // For fixed discounts, ensure it doesn't exceed the subtotal
-                $this->discountAmount = min($this->discountValue, $this->subtotal);
-            }
+        if ($this->discountAmount > 0) {
+            $this->discountAmount = $this->calculateDiscountAmount();
         }
     }
 
     public function applyDiscount()
     {
         $this->validate([
-            'discountType' => 'required|in:percentage,fixed',
-            'discountValue' => 'required|numeric|min:0',
+            'discountType' => 'required|in:percentage,fixed,senior,pwd',
+            'discountValue' => 'required_if:discountType,percentage,fixed|nullable|numeric|min:0',
         ]);
 
         if ($this->discountType === 'percentage' && $this->discountValue > 100) {
@@ -724,15 +756,41 @@ class PointOfSale extends Component
             return;
         }
 
-        if ($this->discountType === 'percentage') {
-            $this->discountAmount = $this->subtotal * ($this->discountValue / 100);
-        } else {
-            $this->discountAmount = min($this->discountValue, $this->subtotal);
-        }
+        $this->discountAmount = $this->calculateDiscountAmount();
 
         $this->updateCartTotals();
         $this->showDiscountModal = false;
         $this->success('Discount applied successfully!');
+    }
+
+    public function updatedDiscountType()
+    {
+        if (in_array($this->discountType, ['senior', 'pwd'], true)) {
+            $this->discountValue = 20;
+        } else {
+            $this->discountValue = '';
+        }
+    }
+
+    public function calculateDiscountAmount(): float
+    {
+        return match ($this->discountType) {
+            'percentage' => $this->subtotal * ((float) $this->discountValue / 100),
+            'fixed' => min((float) $this->discountValue, $this->subtotal),
+            'senior', 'pwd' => $this->subtotal * 0.20,
+            default => 0,
+        };
+    }
+
+    public function discountLabel(): string
+    {
+        return match ($this->discountType) {
+            'percentage' => (float) $this->discountValue . '%',
+            'fixed' => '₱' . number_format((float) $this->discountValue, 2),
+            'senior' => 'Senior Citizen (20%)',
+            'pwd' => 'PWD (20%)',
+            default => 'Discount',
+        };
     }
 
     public function updatedPaidAmount()
@@ -840,6 +898,10 @@ class PointOfSale extends Component
             // Create sale record
             $sale = Sale::create([
                 'customer_id' => $this->selectedCustomer,
+                'promotion_code' => $this->discountAmount > 0 ? $this->discountLabel() : null,
+                'invoice_type' => $this->invoiceType,
+                'tax_type' => $this->taxType,
+                'tax_rate' => $this->taxRate,
                 'warehouse_id' => $this->selectedWarehouse,
                 'user_id' => auth()->id(),
                 'shift_id' => $this->currentShift->id,
@@ -878,7 +940,7 @@ class PointOfSale extends Component
 
             DB::commit();
 
-            $this->success('Sale completed successfully! Invoice: ' . $sale->invoice_number);
+            $this->success('Invoice completed successfully! Invoice: ' . $sale->invoice_number);
             $this->resetSale();
             $this->showPaymentModal = false;
         } catch (\Exception $e) {
@@ -1091,6 +1153,11 @@ class PointOfSale extends Component
     {
         $this->cartItems = [];
         $this->selectedCustomer = null;
+        $this->invoiceType = 'sales';
+        $this->taxType = 'vat_12';
+        $this->taxRate = 12;
+        $this->discountType = 'percentage';
+        $this->discountValue = '';
         $this->discountAmount = 0;
         $this->paidAmount = 0;
         $this->saleNotes = '';
@@ -1409,8 +1476,8 @@ class PointOfSale extends Component
 
     public function removeDiscount()
     {
-        $this->discountType = null;
-        $this->discountValue = 0;
+        $this->discountType = 'percentage';
+        $this->discountValue = '';
         $this->discountAmount = 0;
         $this->updateCartTotals();
         $this->success('Discount removed!');
@@ -1444,6 +1511,10 @@ class PointOfSale extends Component
             $heldSale = Sale::create([
                 'invoice_number' => $this->holdReference,
                 'customer_id' => $this->selectedCustomer,
+                'promotion_code' => $this->discountAmount > 0 ? $this->discountLabel() : null,
+                'invoice_type' => $this->invoiceType,
+                'tax_type' => $this->taxType,
+                'tax_rate' => $this->taxRate,
                 'warehouse_id' => $this->selectedWarehouse,
                 'user_id' => auth()->id(),
                 'shift_id' => $this->currentShift->id, // Associate with current shift
@@ -1461,21 +1532,23 @@ class PointOfSale extends Component
 
             // Create sale items
             foreach ($this->cartItems as $item) {
-                $product = Product::find($item['product_id']);
+                $product = $item['item_type'] === 'product' ? Product::find($item['product_id']) : null;
 
                 SaleItem::create([
                     'sale_id' => $heldSale->id,
+                    'item_type' => $item['item_type'],
                     'product_id' => $item['product_id'],
+                    'service_id' => $item['service_id'] ?? null,
                     'product_name' => $item['name'],
-                    'product_sku' => $item['sku'],
+                    'product_sku' => $item['code'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['price'],
                     'total_price' => $item['subtotal'],
-                    'cost_price' => $product->cost_price ?? 0, // Include cost price for profit calculation
+                    'cost_price' => $product->cost_price ?? 0,
                 ]);
             }
 
-            $this->success('Sale held successfully! Reference: ' . $this->holdReference);
+            $this->success('Invoice held successfully! Reference: ' . $this->holdReference);
             $this->resetSale();
             $this->showHoldSaleModal = false;
         } catch (\Exception $e) {
@@ -1516,7 +1589,7 @@ class PointOfSale extends Component
         if (!$this->checkActiveShift()) return;
 
         try {
-            $heldSale = Sale::with(['customer', 'items.product'])->find($saleId);
+            $heldSale = Sale::with(['customer', 'items.product', 'items.service'])->find($saleId);
 
             if (!$heldSale || $heldSale->status !== 'draft') {
                 $this->error('Held sale not found or already processed.');
@@ -1529,26 +1602,45 @@ class PointOfSale extends Component
             // Load held sale data
             $this->selectedCustomer = $heldSale->customer_id;
             $this->selectedWarehouse = $heldSale->warehouse_id;
+            $this->invoiceType = $heldSale->invoice_type ?? 'sales';
+            $this->taxType = $heldSale->tax_type ?? 'vat_12';
+            $this->taxRate = (float) ($heldSale->tax_rate ?? $this->taxRateForType($this->taxType));
             $this->discountAmount = $heldSale->discount_amount;
             $this->saleNotes = str_replace('HELD SALE: ', '', $heldSale->notes);
 
             // Load cart items from held sale
             foreach ($heldSale->items as $item) {
-                $product = $item->product;
-                if ($product) {
+                if ($item->item_type === 'product' && $item->product) {
+                    $product = $item->product;
                     $inventory = $product->inventory()
                         ->where('warehouse_id', $this->selectedWarehouse)
                         ->first();
 
                     $availableStock = $inventory ? $inventory->quantity_available : 0;
 
-                    $this->cartItems[$product->id] = [
+                    $this->cartItems['product_' . $product->id] = [
+                        'item_type' => 'product',
                         'product_id' => $product->id,
+                        'service_id' => null,
                         'name' => $product->name,
-                        'sku' => $product->sku,
+                        'code' => $product->sku,
                         'price' => $item->unit_price,
                         'quantity' => $item->quantity,
                         'available_stock' => $availableStock,
+                        'subtotal' => $item->total_price,
+                        'track_serial' => $product->track_serial,
+                        'serial_numbers' => [],
+                    ];
+                } elseif ($item->item_type === 'service' && $item->service) {
+                    $service = $item->service;
+                    $this->cartItems['service_' . $service->id] = [
+                        'item_type' => 'service',
+                        'product_id' => null,
+                        'service_id' => $service->id,
+                        'name' => $service->name,
+                        'code' => $service->code,
+                        'price' => $item->unit_price,
+                        'quantity' => $item->quantity,
                         'subtotal' => $item->total_price,
                     ];
                 }
@@ -1560,7 +1652,7 @@ class PointOfSale extends Component
             $heldSale->delete();
 
             $this->showHeldSalesModal = false;
-            $this->success('Held sale retrieved successfully! Reference: ' . $heldSale->invoice_number);
+            $this->success('Held invoice retrieved successfully! Reference: ' . $heldSale->invoice_number);
         } catch (\Exception $e) {
             $this->error('Error retrieving held sale: ' . $e->getMessage());
         }
@@ -1723,7 +1815,9 @@ class PointOfSale extends Component
             $this->subtotal += $item['subtotal'];
         }
 
-        $this->taxAmount = $this->subtotal * ($this->taxRate / 100);
+        $this->recalculateDiscount();
+        $taxableAmount = max(0, $this->subtotal - $this->discountAmount);
+        $this->taxAmount = $taxableAmount * ($this->taxRate / 100);
         $this->totalAmount = $this->subtotal + $this->taxAmount - $this->discountAmount;
         $this->changeAmount = max(0, $this->paidAmount - $this->totalAmount);
     }

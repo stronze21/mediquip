@@ -38,10 +38,10 @@
             <div class="p-4 card-body">
                 <h4 class="text-lg card-title text-primary">
                     <x-mary-icon name="o-shopping-cart" class="w-5 h-5" />
-                    Sales & POS
+                    Sales & Invoice
                 </h4>
                 <ul class="space-y-1 text-sm text-base-content/80">
-                    <li>Touch-friendly POS interface</li>
+                    <li>Touch-friendly Invoice interface</li>
                     <li>Sales history tracking</li>
                     <li>Customer management</li>
                     <li>Returns & exchanges</li>
@@ -105,7 +105,7 @@
                 <tr>
                     <td><span class="badge badge-info">Cashier</span></td>
                     <td>Sales processing and customer service</td>
-                    <td>POS, sales history, customer management</td>
+                    <td>Invoice, sales history, customer management</td>
                 </tr>
                 <tr>
                     <td><span class="badge badge-success">Warehouse Staff</span></td>

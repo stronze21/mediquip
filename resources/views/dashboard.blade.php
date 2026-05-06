@@ -52,12 +52,12 @@
                                 </path>
                             </svg>
                             <h2 class="ml-3 text-xl font-semibold text-gray-900">
-                                Sales & POS
+                                Sales & Invoice
                             </h2>
                         </div>
 
                         <p class="mt-4 text-sm leading-relaxed text-gray-500">
-                            Point of Sale system with customer management, discount handling, and receipt generation.
+                            Invoice system with customer management, discount handling, and receipt generation.
                             Designed for BIR compliance with draft receipt functionality.
                         </p>
                     </div>

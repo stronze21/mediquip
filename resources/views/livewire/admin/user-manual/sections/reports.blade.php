@@ -346,8 +346,8 @@
                 <x-mary-icon name="o-banknotes" class="w-8 h-8" />
             </div>
             <div class="stat-title">Today's Sales</div>
-            <div class="stat-value text-primary">₱12,345</div>
-            <div class="stat-desc">↗︎ 12% (compared to yesterday)</div>
+            <div class="stat-value text-primary">â‚±12,345</div>
+            <div class="stat-desc">â†—ï¸Ž 12% (compared to yesterday)</div>
         </div>
 
         <div class="rounded-lg stat bg-base-200">
@@ -356,7 +356,7 @@
             </div>
             <div class="stat-title">Transactions</div>
             <div class="stat-value text-secondary">45</div>
-            <div class="stat-desc">↗︎ 8% (vs. yesterday)</div>
+            <div class="stat-desc">â†—ï¸Ž 8% (vs. yesterday)</div>
         </div>
 
         <div class="rounded-lg stat bg-base-200">
@@ -374,7 +374,7 @@
             </div>
             <div class="stat-title">Active Customers</div>
             <div class="stat-value text-info">1,234</div>
-            <div class="stat-desc">↗︎ 15 new this week</div>
+            <div class="stat-desc">â†—ï¸Ž 15 new this week</div>
         </div>
     </div>
 
@@ -425,7 +425,7 @@
             <tbody>
                 <tr>
                     <td>Gross Profit Margin</td>
-                    <td>(Revenue - COGS) / Revenue × 100</td>
+                    <td>(Revenue - COGS) / Revenue Ã— 100</td>
                     <td>30-50%</td>
                     <td>Monthly</td>
                 </tr>
@@ -443,13 +443,13 @@
                 </tr>
                 <tr>
                     <td>Customer Retention Rate</td>
-                    <td>Returning Customers / Total Customers × 100</td>
+                    <td>Returning Customers / Total Customers Ã— 100</td>
                     <td>>70%</td>
                     <td>Monthly</td>
                 </tr>
                 <tr>
                     <td>Stock Accuracy</td>
-                    <td>Accurate Counts / Total Counts × 100</td>
+                    <td>Accurate Counts / Total Counts Ã— 100</td>
                     <td>>95%</td>
                     <td>After cycle counts</td>
                 </tr>
@@ -636,7 +636,7 @@
     <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div class="card bg-success text-success-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✓ Do This</h4>
+                <h4 class="card-title">âœ“ Do This</h4>
                 <ul class="space-y-1 text-sm">
                     <li>Review daily sales and inventory reports</li>
                     <li>Set up automated alerts for critical metrics</li>
@@ -650,7 +650,7 @@
         </div>
         <div class="card bg-error text-error-content">
             <div class="p-4 card-body">
-                <h4 class="card-title">✗ Avoid This</h4>
+                <h4 class="card-title">âœ— Avoid This</h4>
                 <ul class="space-y-1 text-sm">
                     <li>Ignoring low stock alerts</li>
                     <li>Running large reports during peak hours</li>

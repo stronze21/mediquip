@@ -4,7 +4,7 @@
         <div class="flex items-center gap-3">
             {{-- Logo --}}
             <div class="text-xl font-bold text-primary">
-                {{ config('app.name', 'POS System') }}
+                {{ config('app.name', 'Invoice System') }}
             </div>
         </div>
 
@@ -54,7 +54,7 @@
                 <span>Dashboard</span>
             </a>
 
-            {{-- Point of Sale --}}
+            {{-- Invoice --}}
             <a href="{{ route('sales.pos') }}"
                 class="flex items-center gap-3 p-3 rounded-lg hover:bg-base-200 {{ request()->routeIs('sales.pos') ? 'bg-primary text-primary-content' : '' }}"
                 onclick="closeMobileMenu()">
@@ -63,7 +63,7 @@
                         d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6">
                     </path>
                 </svg>
-                <span>Point of Sale</span>
+                <span>Invoice</span>
             </a>
 
             {{-- Inventory Section --}}

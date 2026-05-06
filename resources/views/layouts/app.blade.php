@@ -201,7 +201,7 @@
                 {{-- Sales - Admin, Manager, or Cashier --}}
                 @if ($isAdmin || $isManager || $isCashier)
                     <x-mary-menu-sub title="Sales" icon="o-shopping-cart">
-                        <x-mary-menu-item title="Point of Sale" icon="o-shopping-cart"
+                        <x-mary-menu-item title="Invoice" icon="o-document-text"
                             link="{{ route('sales.pos') }}" />
                         <x-mary-menu-item title="Sales History" icon="o-document-text"
                             link="{{ route('sales.history') }}" />

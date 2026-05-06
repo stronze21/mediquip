@@ -179,7 +179,7 @@
         {{-- Quick Actions --}}
         <x-mary-card title="Quick Actions" subtitle="Common tasks" class="shadow-lg">
             <div class="space-y-2">
-                <x-mary-button label="New Sale" icon="o-plus" link="{{ route('sales.pos') }}"
+                <x-mary-button label="New Invoice" icon="o-plus" link="{{ route('sales.pos') }}"
                     class="w-full btn-primary btn-sm" />
                 <x-mary-button label="Add Product" icon="o-cube" link="{{ route('inventory.products') }}"
                     class="w-full btn-outline btn-sm" />
