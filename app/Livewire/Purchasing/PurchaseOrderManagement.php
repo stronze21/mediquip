@@ -673,7 +673,7 @@ class PurchaseOrderManagement extends Component
         $discountAmount = $subtotal * ($discountValue / 100);
         $taxRate = $this->taxRateForType($this->tax_type);
         $taxableAmount = max(0, $subtotal - $discountAmount);
-        $taxAmount = $taxableAmount * ($taxRate / 100);
+        $taxAmount = $this->calculateTaxAmount($taxableAmount);
 
         return [
             'subtotal' => $subtotal,
@@ -681,7 +681,7 @@ class PurchaseOrderManagement extends Component
             'discount_amount' => $discountAmount,
             'tax_rate' => $taxRate,
             'tax_amount' => $taxAmount,
-            'total' => $taxableAmount + $taxAmount,
+            'total' => $this->calculateTotalAmount($taxableAmount, $taxAmount),
         ];
     }
 
@@ -712,12 +712,34 @@ class PurchaseOrderManagement extends Component
         };
     }
 
+    public function calculateTaxAmount(float $amount): float
+    {
+        if ($this->tax_type === 'vat_12') {
+            return $amount - ($amount / 1.12);
+        }
+
+        if (in_array($this->tax_type, ['ewt_sales_1', 'ewt_service_2'], true)) {
+            return ($amount / 1.12) * ($this->taxRateForType($this->tax_type) / 100);
+        }
+
+        return $amount * ($this->taxRateForType($this->tax_type) / 100);
+    }
+
+    public function calculateTotalAmount(float $amount, float $taxAmount): float
+    {
+        return match ($this->tax_type) {
+            'vat_12' => $amount,
+            'ewt_sales_1', 'ewt_service_2' => max(0, $amount - $taxAmount),
+            default => $amount + $taxAmount,
+        };
+    }
+
     public function taxLabel(?string $type = null): string
     {
         return match ($type ?? $this->tax_type) {
-            'vat_12' => 'VAT (12%)',
-            'ewt_sales_1' => 'EWT (1% on sales)',
-            'ewt_service_2' => 'EWT (2% on services)',
+            'vat_12' => 'VAT (12% inclusive)',
+            'ewt_sales_1' => 'EWT (1% on sales, net of VAT)',
+            'ewt_service_2' => 'EWT (2% on services, net of VAT)',
             default => 'No Tax',
         };
     }

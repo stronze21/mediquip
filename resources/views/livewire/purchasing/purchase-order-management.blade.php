@@ -103,9 +103,9 @@
                                 :disabled="in_array($discount_type, ['senior', 'pwd'], true)" />
 
                             <x-mary-select label="Tax Rate" :options="[
-                                ['value' => 'vat_12', 'label' => 'VAT (12%)'],
-                                ['value' => 'ewt_sales_1', 'label' => 'EWT (1% on sales)'],
-                                ['value' => 'ewt_service_2', 'label' => 'EWT (2% on services)'],
+                                ['value' => 'vat_12', 'label' => 'VAT (12% inclusive)'],
+                                ['value' => 'ewt_sales_1', 'label' => 'EWT (1% on sales, net of VAT)'],
+                                ['value' => 'ewt_service_2', 'label' => 'EWT (2% on services, net of VAT)'],
                                 ['value' => 'none', 'label' => 'No Tax'],
                             ]" wire:model.live="tax_type" option-value="value" option-label="label" />
                         </div>

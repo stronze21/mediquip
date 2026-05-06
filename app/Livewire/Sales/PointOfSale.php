@@ -166,10 +166,32 @@ class PointOfSale extends Component
     public function taxLabel(): string
     {
         return match ($this->taxType) {
-            'vat_12' => 'VAT (12%)',
-            'ewt_sales_1' => 'EWT (1% on sales)',
-            'ewt_service_2' => 'EWT (2% on services)',
+            'vat_12' => 'VAT (12% inclusive)',
+            'ewt_sales_1' => 'EWT (1% on sales, net of VAT)',
+            'ewt_service_2' => 'EWT (2% on services, net of VAT)',
             default => 'No Tax',
+        };
+    }
+
+    public function calculateTaxAmount(float $amount): float
+    {
+        if ($this->taxType === 'vat_12') {
+            return $amount - ($amount / 1.12);
+        }
+
+        if (in_array($this->taxType, ['ewt_sales_1', 'ewt_service_2'], true)) {
+            return ($amount / 1.12) * ($this->taxRate / 100);
+        }
+
+        return $amount * ($this->taxRate / 100);
+    }
+
+    public function calculateTotalAmount(float $amount, float $taxAmount): float
+    {
+        return match ($this->taxType) {
+            'vat_12' => $amount,
+            'ewt_sales_1', 'ewt_service_2' => max(0, $amount - $taxAmount),
+            default => $amount + $taxAmount,
         };
     }
 
@@ -1817,8 +1839,8 @@ class PointOfSale extends Component
 
         $this->recalculateDiscount();
         $taxableAmount = max(0, $this->subtotal - $this->discountAmount);
-        $this->taxAmount = $taxableAmount * ($this->taxRate / 100);
-        $this->totalAmount = $this->subtotal + $this->taxAmount - $this->discountAmount;
+        $this->taxAmount = $this->calculateTaxAmount($taxableAmount);
+        $this->totalAmount = $this->calculateTotalAmount($taxableAmount, $this->taxAmount);
         $this->changeAmount = max(0, $this->paidAmount - $this->totalAmount);
     }
 }
