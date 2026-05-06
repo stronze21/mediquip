@@ -7,6 +7,7 @@ use App\Models\PurchaseOrderItem;
 use App\Models\Supplier;
 use App\Models\Warehouse;
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\Inventory;
 use App\Models\StockMovement;
 use Livewire\Component;
@@ -30,6 +31,13 @@ class PurchaseOrderManagement extends Component
     public $warehouse_id = '';
     public $order_date = '';
     public $expected_date = '';
+    public $tin = '';
+    public $business_style = '';
+    public $address = '';
+    public $contact_person = '';
+    public $contact_number = '';
+    public $terms = '';
+    public $due_date = '';
     public $notes = '';
     public $items = [];
 
@@ -48,6 +56,13 @@ class PurchaseOrderManagement extends Component
         'warehouse_id' => 'required|exists:warehouses,id',
         'order_date' => 'required|date',
         'expected_date' => 'required|date|after_or_equal:order_date',
+        'tin' => 'nullable|string|max:255',
+        'business_style' => 'nullable|string|max:255',
+        'address' => 'nullable|string',
+        'contact_person' => 'nullable|string|max:255',
+        'contact_number' => 'nullable|string|max:255',
+        'terms' => 'nullable|string|max:255',
+        'due_date' => 'nullable|date|after_or_equal:order_date',
         'notes' => 'nullable|string',
         'items' => 'required|array|min:1',
         'items.*.product_id' => 'required|exists:products,id',
@@ -77,7 +92,9 @@ class PurchaseOrderManagement extends Component
                     $this->warehouse_id = $defaultWarehouse->id;
                 }
 
-                // Add a small delay then open modal to ensure supplier_id is set
+                $this->fillSupplierDetails($supplierId);
+
+                // Add a small delay then open the full page form to ensure supplier_id is set
                 $this->js('setTimeout(() => { $wire.openModalWithSupplier() }, 100)');
                 $this->success("Creating purchase order for {$supplierName}.");
             }
@@ -105,6 +122,26 @@ class PurchaseOrderManagement extends Component
                 $this->warehouse_id = $defaultWarehouse->id;
             }
         }
+    }
+
+    public function updatedSupplierId($supplierId)
+    {
+        $this->fillSupplierDetails($supplierId);
+    }
+
+    private function fillSupplierDetails($supplierId): void
+    {
+        $supplier = Supplier::find($supplierId);
+
+        if (!$supplier) {
+            return;
+        }
+
+        $this->tin = $supplier->tin ?? '';
+        $this->business_style = $supplier->business_style ?? '';
+        $this->address = $supplier->address ?? '';
+        $this->contact_person = $supplier->contact_person ?? '';
+        $this->contact_number = $supplier->phone ?? '';
     }
 
     public function render()
@@ -183,6 +220,15 @@ class PurchaseOrderManagement extends Component
         $this->dispatch('modal-opened');
     }
 
+    public function closeForm()
+    {
+        $this->showModal = false;
+        $this->editMode = false;
+        $this->selectedPO = null;
+        $this->resetForm();
+        $this->resetValidation();
+    }
+
     public function editPO(PurchaseOrder $po)
     {
         if ($po->status !== 'draft') {
@@ -195,6 +241,13 @@ class PurchaseOrderManagement extends Component
         $this->warehouse_id = $po->warehouse_id;
         $this->order_date = $po->order_date->format('Y-m-d');
         $this->expected_date = $po->expected_date->format('Y-m-d');
+        $this->tin = $po->tin ?? '';
+        $this->business_style = $po->business_style ?? '';
+        $this->address = $po->address ?? '';
+        $this->contact_person = $po->contact_person ?? '';
+        $this->contact_number = $po->contact_number ?? '';
+        $this->terms = $po->terms ?? '';
+        $this->due_date = $po->due_date?->format('Y-m-d') ?? '';
         $this->notes = $po->notes ?? '';
 
         $this->items = $po->items->map(function ($item) {
@@ -207,6 +260,7 @@ class PurchaseOrderManagement extends Component
 
         $this->editMode = true;
         $this->showModal = true;
+        $this->showDetailsModal = false;
         $this->resetValidation();
     }
 
@@ -225,21 +279,30 @@ class PurchaseOrderManagement extends Component
         $this->items = array_values($this->items);
     }
 
-    public function save()
+    public function save($submit = false)
     {
         $this->validate();
 
         try {
+            \DB::beginTransaction();
+
             $totalAmount = collect($this->items)->sum(fn($item) => $item['quantity'] * $item['unit_cost']);
 
             $data = [
                 'supplier_id' => $this->supplier_id,
                 'warehouse_id' => $this->warehouse_id,
                 'requested_by' => auth()->id(),
-                'status' => 'draft',
+                'status' => $submit ? 'pending' : 'draft',
                 'total_amount' => $totalAmount,
                 'order_date' => $this->order_date,
                 'expected_date' => $this->expected_date,
+                'tin' => $this->tin,
+                'business_style' => $this->business_style,
+                'address' => $this->address,
+                'contact_person' => $this->contact_person,
+                'contact_number' => $this->contact_number,
+                'terms' => $this->terms,
+                'due_date' => $this->due_date ?: null,
                 'notes' => $this->notes,
             ];
 
@@ -264,12 +327,38 @@ class PurchaseOrderManagement extends Component
                 ]);
             }
 
-            $this->success($this->editMode ? 'Purchase order updated successfully!' : 'Purchase order created successfully!');
+            $this->syncSupplierSnapshot();
+
+            \DB::commit();
+
+            $message = $submit
+                ? ($this->editMode ? 'Purchase order updated and submitted successfully!' : 'Purchase order created and submitted successfully!')
+                : ($this->editMode ? 'Purchase order draft updated successfully!' : 'Purchase order draft saved successfully!');
+
+            $this->success($message);
             $this->showModal = false;
             $this->resetForm();
         } catch (\Exception $e) {
+            \DB::rollBack();
             $this->error('Error saving purchase order: ' . $e->getMessage());
         }
+    }
+
+    private function syncSupplierSnapshot(): void
+    {
+        $supplier = Supplier::find($this->supplier_id);
+
+        if (!$supplier) {
+            return;
+        }
+
+        $supplier->update([
+            'tin' => $this->tin,
+            'business_style' => $this->business_style,
+            'address' => $this->address,
+            'contact_person' => $this->contact_person,
+            'phone' => $this->contact_number,
+        ]);
     }
 
     public function submitPO(PurchaseOrder $po)
@@ -300,6 +389,12 @@ class PurchaseOrderManagement extends Component
                 'quantity_pending' => $item->quantity_pending,
                 'receiving_quantity' => $item->quantity_pending,
                 'unit_cost' => $item->unit_cost,
+                'track_batch' => $item->product->track_batch,
+                'track_expiry' => $item->product->track_expiry,
+                'batch_number' => $item->product->track_batch ? $this->generateBatchNumber($item->product) : '',
+                'lot_number' => '',
+                'manufactured_date' => '',
+                'expiry_date' => '',
             ];
         })->toArray();
 
@@ -310,7 +405,36 @@ class PurchaseOrderManagement extends Component
     {
         $this->validate([
             'receivingItems.*.receiving_quantity' => 'required|integer|min:0',
+            'receivingItems.*.batch_number' => 'nullable|string|max:255',
+            'receivingItems.*.lot_number' => 'nullable|string|max:255',
+            'receivingItems.*.manufactured_date' => 'nullable|date',
+            'receivingItems.*.expiry_date' => 'nullable|date',
         ]);
+
+        foreach ($this->receivingItems as $index => $receivingItem) {
+            if (($receivingItem['receiving_quantity'] ?? 0) <= 0) {
+                continue;
+            }
+
+            if (($receivingItem['track_batch'] ?? false) && empty($receivingItem['batch_number'])) {
+                $this->addError("receivingItems.{$index}.batch_number", 'Batch number is required.');
+                return;
+            }
+
+            if (($receivingItem['track_expiry'] ?? false) && empty($receivingItem['expiry_date'])) {
+                $this->addError("receivingItems.{$index}.expiry_date", 'Expiry date is required.');
+                return;
+            }
+
+            if (
+                !empty($receivingItem['manufactured_date'])
+                && !empty($receivingItem['expiry_date'])
+                && $receivingItem['expiry_date'] <= $receivingItem['manufactured_date']
+            ) {
+                $this->addError("receivingItems.{$index}.expiry_date", 'Expiry date must be after the manufactured date.');
+                return;
+            }
+        }
 
         try {
             \DB::beginTransaction();
@@ -335,14 +459,38 @@ class PurchaseOrderManagement extends Component
                     ->first();
 
                 if ($inventory) {
-                    $inventory->increment('quantity_on_hand', $receivingItem['receiving_quantity']);
+                    $currentValue = $inventory->quantity_on_hand * $inventory->average_cost;
+                    $newValue = $receivingItem['receiving_quantity'] * $receivingItem['unit_cost'];
+                    $newQuantity = $inventory->quantity_on_hand + $receivingItem['receiving_quantity'];
+
+                    $inventory->update([
+                        'quantity_on_hand' => $newQuantity,
+                        'average_cost' => $newQuantity > 0 ? ($currentValue + $newValue) / $newQuantity : $receivingItem['unit_cost'],
+                    ]);
                 } else {
                     Inventory::create([
                         'product_id' => $poItem->product_id,
                         'warehouse_id' => $po->warehouse_id,
                         'quantity_on_hand' => $receivingItem['receiving_quantity'],
-                        'quantity_available' => $receivingItem['receiving_quantity'],
                         'average_cost' => $receivingItem['unit_cost'],
+                    ]);
+                }
+
+                if (($receivingItem['track_batch'] ?? false) || ($receivingItem['track_expiry'] ?? false)) {
+                    ProductBatch::create([
+                        'product_id' => $poItem->product_id,
+                        'warehouse_id' => $po->warehouse_id,
+                        'purchase_order_item_id' => $poItem->id,
+                        'batch_number' => $receivingItem['batch_number'] ?: $this->generateBatchNumber($poItem->product),
+                        'lot_number' => $receivingItem['lot_number'] ?: null,
+                        'manufactured_date' => $receivingItem['manufactured_date'] ?: null,
+                        'expiry_date' => $receivingItem['expiry_date'] ?: null,
+                        'quantity_received' => $receivingItem['receiving_quantity'],
+                        'quantity_on_hand' => $receivingItem['receiving_quantity'],
+                        'unit_cost' => $receivingItem['unit_cost'],
+                        'received_at' => now(),
+                        'supplier_name' => $po->supplier->name,
+                        'notes' => "Received from PO: {$po->po_number}",
                     ]);
                 }
 
@@ -351,7 +499,10 @@ class PurchaseOrderManagement extends Component
                     'product_id' => $poItem->product_id,
                     'warehouse_id' => $po->warehouse_id,
                     'type' => 'purchase_receipt',
-                    'quantity' => $receivingItem['receiving_quantity'],
+                    'quantity_before' => max(0, ($inventory?->quantity_on_hand ?? 0) - $receivingItem['receiving_quantity']),
+                    'quantity_changed' => $receivingItem['receiving_quantity'],
+                    'quantity_after' => $inventory?->fresh()->quantity_on_hand ?? $receivingItem['receiving_quantity'],
+                    'unit_cost' => $receivingItem['unit_cost'],
                     'reference_type' => 'App\Models\PurchaseOrder',
                     'reference_id' => $po->id,
                     'user_id' => auth()->id(),
@@ -378,6 +529,11 @@ class PurchaseOrderManagement extends Component
             \DB::rollback();
             $this->error('Error processing receipt: ' . $e->getMessage());
         }
+    }
+
+    private function generateBatchNumber(Product $product): string
+    {
+        return strtoupper($product->sku) . '-' . now()->format('Ymd') . '-' . str_pad(random_int(1, 999), 3, '0', STR_PAD_LEFT);
     }
 
     public function cancelPO(PurchaseOrder $po)
@@ -443,6 +599,13 @@ class PurchaseOrderManagement extends Component
             'warehouse_id',
             'order_date',
             'expected_date',
+            'tin',
+            'business_style',
+            'address',
+            'contact_person',
+            'contact_number',
+            'terms',
+            'due_date',
             'notes',
             'items'
         ]);

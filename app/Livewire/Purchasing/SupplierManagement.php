@@ -24,6 +24,8 @@ class SupplierManagement extends Component
 
     // Form fields
     public $name = '';
+    public $tin = '';
+    public $business_style = '';
     public $contact_person = '';
     public $email = '';
     public $phone = '';
@@ -56,6 +58,8 @@ class SupplierManagement extends Component
 
     protected $rules = [
         'name' => 'required|string|max:255',
+        'tin' => 'nullable|string|max:255',
+        'business_style' => 'nullable|string|max:255',
         'contact_person' => 'nullable|string|max:255',
         'email' => 'nullable|email|max:255',
         'phone' => 'nullable|string|max:20',
@@ -103,6 +107,8 @@ class SupplierManagement extends Component
     {
         $this->selectedSupplier = $supplier;
         $this->name = $supplier->name;
+        $this->tin = $supplier->tin ?? '';
+        $this->business_style = $supplier->business_style ?? '';
         $this->contact_person = $supplier->contact_person ?? '';
         $this->email = $supplier->email ?? '';
         $this->phone = $supplier->phone ?? '';
@@ -125,6 +131,8 @@ class SupplierManagement extends Component
         try {
             $data = [
                 'name' => $this->name,
+                'tin' => $this->tin,
+                'business_style' => $this->business_style,
                 'contact_person' => $this->contact_person,
                 'email' => $this->email,
                 'phone' => $this->phone,
@@ -374,6 +382,8 @@ class SupplierManagement extends Component
     {
         $this->reset([
             'name',
+            'tin',
+            'business_style',
             'contact_person',
             'email',
             'phone',

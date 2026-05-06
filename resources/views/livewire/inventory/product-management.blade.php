@@ -143,6 +143,12 @@
                     </div>
                 </div>
 
+                <x-mary-select label="Product Type" :options="[
+                    ['id' => 'medical_equipment', 'name' => 'Medical Equipment'],
+                    ['id' => 'medical_supply', 'name' => 'Medical Supply'],
+                    ['id' => 'drug_medicine', 'name' => 'Drug / Medicine'],
+                ]" wire:model="product_type" />
+
                 {{-- Enhanced Category Selection with Choices --}}
                 <div class="space-y-3">
                     <x-mary-choices-offline label="Category *" wire:model.live="category_id" :options="$categoriesSearchable"
@@ -245,6 +251,8 @@
                 <div class="flex gap-4">
                     <x-mary-checkbox label="Track Serial Numbers" wire:model="track_serial" />
                     <x-mary-checkbox label="Track Warranty" wire:model="track_warranty" />
+                    <x-mary-checkbox label="Track Batch" wire:model="track_batch" />
+                    <x-mary-checkbox label="Track Expiry" wire:model="track_expiry" />
                 </div>
             </div>
         </div>
@@ -336,6 +344,9 @@
                         <div class="space-y-2">
                             <div><strong>Name:</strong> {{ $selectedProduct->name }}</div>
                             <div><strong>SKU:</strong> {{ $selectedProduct->sku }}</div>
+                            <div><strong>Type:</strong>
+                                {{ ucwords(str_replace('_', ' ', $selectedProduct->product_type ?? 'medical_supply')) }}
+                            </div>
                             @if ($selectedProduct->barcode)
                                 <div><strong>Barcode:</strong> {{ $selectedProduct->barcode }}</div>
                             @endif
@@ -419,10 +430,57 @@
                     </div>
                 @endif
 
+                {{-- Batch & Expiry Tracking --}}
+                @if ($selectedProduct->batches->count() > 0)
+                    <div>
+                        <h4 class="mb-3 text-lg font-semibold">Batch & Expiry Tracking</h4>
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Batch/Lot</th>
+                                        <th>Warehouse</th>
+                                        <th>On Hand</th>
+                                        <th>Received</th>
+                                        <th>Expiry Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach ($selectedProduct->batches->sortBy('expiry_date') as $batch)
+                                        <tr>
+                                            <td>
+                                                <div class="font-medium">{{ $batch->batch_number }}</div>
+                                                @if ($batch->lot_number)
+                                                    <div class="text-xs text-gray-500">Lot:
+                                                        {{ $batch->lot_number }}</div>
+                                                @endif
+                                            </td>
+                                            <td>{{ $batch->warehouse->name }}</td>
+                                            <td class="font-semibold">{{ $batch->quantity_on_hand }}</td>
+                                            <td>{{ $batch->quantity_received }}</td>
+                                            <td>{{ $batch->expiry_date?->format('M d, Y') ?? 'Not set' }}</td>
+                                            <td>
+                                                @if ($batch->is_expired)
+                                                    <x-mary-badge value="Expired" class="badge-error" />
+                                                @elseif ($batch->is_expiring_soon)
+                                                    <x-mary-badge value="Expiring Soon" class="badge-warning" />
+                                                @else
+                                                    <x-mary-badge value="Good" class="badge-success" />
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                @endif
+
                 {{-- Status & Tracking --}}
                 <div>
                     <h4 class="mb-3 text-lg font-semibold">Status & Settings</h4>
-                    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-5">
                         <div>
                             <strong>Status:</strong>
                             <x-mary-badge value="{{ ucfirst($selectedProduct->status) }}"
@@ -437,6 +495,16 @@
                             <strong>Warranty Tracking:</strong>
                             <x-mary-badge value="{{ $selectedProduct->track_warranty ? 'Yes' : 'No' }}"
                                 class="badge-{{ $selectedProduct->track_warranty ? 'success' : 'ghost' }}" />
+                        </div>
+                        <div>
+                            <strong>Batch Tracking:</strong>
+                            <x-mary-badge value="{{ $selectedProduct->track_batch ? 'Yes' : 'No' }}"
+                                class="badge-{{ $selectedProduct->track_batch ? 'success' : 'ghost' }}" />
+                        </div>
+                        <div>
+                            <strong>Expiry Tracking:</strong>
+                            <x-mary-badge value="{{ $selectedProduct->track_expiry ? 'Yes' : 'No' }}"
+                                class="badge-{{ $selectedProduct->track_expiry ? 'success' : 'ghost' }}" />
                         </div>
                     </div>
                 </div>

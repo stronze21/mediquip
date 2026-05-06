@@ -162,6 +162,9 @@
         box-class="max-w-2xl">
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <x-mary-input label="Supplier Name *" wire:model="name" placeholder="Enter supplier name" />
+            <x-mary-input label="TIN" wire:model="tin" placeholder="Enter TIN" />
+            <x-mary-input label="Business Style" wire:model="business_style"
+                placeholder="Enter business style" />
             <x-mary-input label="Contact Person" wire:model="contact_person" placeholder="Enter contact person" />
             <x-mary-input label="Email" wire:model="email" type="email" placeholder="Enter email address" />
             <x-mary-input label="Phone" wire:model="phone" placeholder="Enter phone number" />

@@ -41,6 +41,11 @@ class PurchaseOrderItem extends Model
         return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 
+    public function batches()
+    {
+        return $this->hasMany(ProductBatch::class);
+    }
+
     public function getQuantityPendingAttribute()
     {
         return $this->quantity_ordered - $this->quantity_received;

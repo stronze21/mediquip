@@ -11,6 +11,8 @@ return new class extends Migration
         Schema::table('products', function (Blueprint $table) {
             // Remove foreign key constraint first
             $table->dropForeign(['product_brand_id']);
+            // Then remove the composite index that still references product_brand_id.
+            $table->dropIndex('products_product_brand_id_status_index');
             // Remove columns
             $table->dropColumn(['product_brand_id', 'description', 'part_number', 'oem_number']);
         });
@@ -18,7 +20,9 @@ return new class extends Migration
             // Remove foreign key constraint first
             $table->dropForeign(['brand_id']);
         });
-        Schema::dropIfExists('motorcycle_brands', 'motorcycle_models');
+        Schema::dropIfExists('product_compatibility');
+        Schema::dropIfExists('motorcycle_models');
+        Schema::dropIfExists('motorcycle_brands');
     }
 
     public function down()
@@ -56,6 +60,18 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['brand_id', 'slug']);
+        });
+
+        Schema::create('product_compatibility', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->foreignId('motorcycle_model_id')->constrained()->onDelete('cascade');
+            $table->year('year_from')->nullable();
+            $table->year('year_to')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+
+            $table->unique(['product_id', 'motorcycle_model_id']);
         });
     }
 };

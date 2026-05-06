@@ -14,21 +14,21 @@ class UserSeeder extends Seeder
         $users = [
             [
                 'name' => 'Admin User',
-                'email' => 'admin@farmview.shop',
+                'email' => 'admin@test.com',
                 'password' => Hash::make('password'),
                 'role' => 'admin',
                 'email_verified_at' => now(),
             ],
             [
                 'name' => 'Manager User',
-                'email' => 'manager@farmview.shop',
+                'email' => 'manager@test.com',
                 'password' => Hash::make('password'),
                 'role' => 'manager',
                 'email_verified_at' => now(),
             ],
             [
                 'name' => 'Cashier User',
-                'email' => 'cashier@farmview.shop',
+                'email' => 'cashier@test.com',
                 'password' => Hash::make('password'),
                 'role' => 'cashier',
                 'email_verified_at' => now(),

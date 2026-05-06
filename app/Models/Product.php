@@ -29,6 +29,7 @@ class Product extends Model
     protected $fillable = [
         'category_id',
         'subcategory_id',
+        'product_type',
         'name',
         'slug',
         'sku',
@@ -44,6 +45,8 @@ class Product extends Model
         'warranty_months',
         'track_serial',
         'track_warranty',
+        'track_batch',
+        'track_expiry',
         'min_stock_level',
         'max_stock_level',
         'reorder_point',
@@ -63,6 +66,8 @@ class Product extends Model
         'warranty_months' => 'integer',
         'track_serial' => 'boolean',
         'track_warranty' => 'boolean',
+        'track_batch' => 'boolean',
+        'track_expiry' => 'boolean',
         'min_stock_level' => 'integer',
         'max_stock_level' => 'integer',
         'reorder_point' => 'integer',
@@ -91,6 +96,11 @@ class Product extends Model
     public function inventory()
     {
         return $this->hasMany(Inventory::class);
+    }
+
+    public function batches()
+    {
+        return $this->hasMany(ProductBatch::class);
     }
 
     public function saleItems()
@@ -260,6 +270,14 @@ class Product extends Model
     public function isLowStock()
     {
         return $this->total_stock <= $this->min_stock_level;
+    }
+
+    public function hasExpiringStock($days = 90)
+    {
+        return $this->track_expiry && $this->batches()
+            ->where('quantity_on_hand', '>', 0)
+            ->whereDate('expiry_date', '<=', now()->addDays($days))
+            ->exists();
     }
 
     /**

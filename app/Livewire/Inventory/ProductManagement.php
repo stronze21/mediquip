@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Inventory;
 use App\Models\InventoryLocation;
 use App\Models\Product;
+use App\Models\ProductBatch;
 use App\Models\Subcategory;
 use App\Models\Warehouse;
 use Illuminate\Support\Str;
@@ -31,6 +32,7 @@ class ProductManagement extends Component
     public $name = '';
     public $sku = '';
     public $barcode = '';
+    public $product_type = 'medical_supply';
     public $category_id = null;
     public $subcategory_id = null;
     public $cost_price = 0.00;
@@ -40,6 +42,8 @@ class ProductManagement extends Component
     public $warranty_months = 0;
     public $track_serial = false;
     public $track_warranty = false;
+    public $track_batch = false;
+    public $track_expiry = false;
     public $min_stock_level = 0;
     public $max_stock_level = 0;
     public $reorder_point = 0;
@@ -79,6 +83,7 @@ class ProductManagement extends Component
     protected $rules = [
         'name' => 'required|string|max:255',
         'sku' => 'required|string|max:100|unique:products,sku',
+        'product_type' => 'required|in:medical_equipment,medical_supply,drug_medicine',
         'category_id' => 'required|exists:categories,id',
         'cost_price' => 'required|numeric|min:0',
         'selling_price' => 'required|numeric|min:0',
@@ -276,6 +281,7 @@ class ProductManagement extends Component
         $this->sku = $product->sku;
         $this->barcode = $product->barcode ?? '';
         $this->category_id = $product->category_id;
+        $this->product_type = $product->product_type ?? 'medical_supply';
         $this->subcategory_id = $product->subcategory_id;
         $this->cost_price = $product->cost_price;
         $this->selling_price = $product->selling_price;
@@ -286,6 +292,8 @@ class ProductManagement extends Component
         $this->warranty_months = $product->warranty_months;
         $this->track_serial = $product->track_serial;
         $this->track_warranty = $product->track_warranty;
+        $this->track_batch = $product->track_batch;
+        $this->track_expiry = $product->track_expiry;
         $this->min_stock_level = $product->min_stock_level;
         $this->max_stock_level = $product->max_stock_level;
         $this->reorder_point = $product->reorder_point;
@@ -421,6 +429,7 @@ class ProductManagement extends Component
                 'name' => $this->name,
                 'sku' => $this->sku,
                 'barcode' => $this->barcode,
+                'product_type' => $this->product_type,
                 'category_id' => $this->category_id,
                 'subcategory_id' => $this->subcategory_id,
                 'cost_price' => $this->cost_price,
@@ -432,6 +441,8 @@ class ProductManagement extends Component
                 'warranty_months' => $this->warranty_months,
                 'track_serial' => $this->track_serial,
                 'track_warranty' => $this->track_warranty,
+                'track_batch' => $this->track_batch,
+                'track_expiry' => $this->track_expiry,
                 'min_stock_level' => $this->min_stock_level,
                 'max_stock_level' => $this->max_stock_level,
                 'reorder_point' => $this->reorder_point,
@@ -491,6 +502,7 @@ class ProductManagement extends Component
             'category',
             'subcategory',
             'inventory.warehouse',
+            'batches.warehouse',
             'stockMovements' => function ($query) {
                 $query->orderBy('created_at', 'desc')->limit(10);
             },
@@ -517,6 +529,7 @@ class ProductManagement extends Component
             'name',
             'sku',
             'barcode',
+            'product_type',
             'category_id',
             'subcategory_id',
             'cost_price',
@@ -525,6 +538,8 @@ class ProductManagement extends Component
             'warranty_months',
             'track_serial',
             'track_warranty',
+            'track_batch',
+            'track_expiry',
             'min_stock_level',
             'max_stock_level',
             'reorder_point',
@@ -536,6 +551,7 @@ class ProductManagement extends Component
         $this->alt_price1 = null;
         $this->alt_price2 = null;
         $this->alt_price3 = null;
+        $this->product_type = 'medical_supply';
         $this->status = 'active';
         $this->loadWarehouses();
     }
@@ -563,6 +579,8 @@ class ProductManagement extends Component
                         'Warranty Months' => $product->warranty_months,
                         'Track Serial' => $product->track_serial ? 'Yes' : 'No',
                         'Track Warranty' => $product->track_warranty ? 'Yes' : 'No',
+                        'Track Batch' => $product->track_batch ? 'Yes' : 'No',
+                        'Track Expiry' => $product->track_expiry ? 'Yes' : 'No',
                         'Min Stock Level' => $product->min_stock_level,
                         'Max Stock Level' => $product->max_stock_level,
                         'Reorder Point' => $product->reorder_point,

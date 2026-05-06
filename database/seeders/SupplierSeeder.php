@@ -13,6 +13,8 @@ class SupplierSeeder extends Seeder
         $suppliers = [
             [
                 'name' => 'Motolite Trading',
+                'tin' => '001-234-567-000',
+                'business_style' => 'Trading',
                 'contact_person' => 'Roberto Santos',
                 'email' => 'roberto@motolite.ph',
                 'phone' => '+63 2 8234 5678',
@@ -23,6 +25,8 @@ class SupplierSeeder extends Seeder
             ],
             [
                 'name' => 'Speed Motorsports Supply',
+                'tin' => '002-345-678-000',
+                'business_style' => 'Parts Supply',
                 'contact_person' => 'Maria Cruz',
                 'email' => 'maria@speedmotorsports.ph',
                 'phone' => '+63 2 8345 6789',
@@ -33,6 +37,8 @@ class SupplierSeeder extends Seeder
             ],
             [
                 'name' => 'JVT Parts Distributor',
+                'tin' => '003-456-789-000',
+                'business_style' => 'Distributor',
                 'contact_person' => 'Antonio Reyes',
                 'email' => 'antonio@jvtparts.ph',
                 'phone' => '+63 2 8456 7890',
@@ -43,6 +49,8 @@ class SupplierSeeder extends Seeder
             ],
             [
                 'name' => 'Performance Parts Hub',
+                'tin' => '004-567-890-000',
+                'business_style' => 'Retail and Wholesale',
                 'contact_person' => 'Sarah Gonzales',
                 'email' => 'sarah@performancehub.ph',
                 'phone' => '+63 2 8567 8901',

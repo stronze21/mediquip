@@ -16,7 +16,9 @@ class Inventory extends Model
         'quantity_on_hand',
         'quantity_reserved',
         'average_cost',
+        'inventory_location_id',
         'location',
+        'location_legacy',
         'last_counted_at'
     ];
 

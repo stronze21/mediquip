@@ -18,6 +18,13 @@ class PurchaseOrder extends Model
         'total_amount',
         'order_date',
         'expected_date',
+        'tin',
+        'business_style',
+        'address',
+        'contact_person',
+        'contact_number',
+        'terms',
+        'due_date',
         'received_date',
         'notes'
     ];
@@ -26,6 +33,7 @@ class PurchaseOrder extends Model
         'total_amount' => 'decimal:2',
         'order_date' => 'date',
         'expected_date' => 'date',
+        'due_date' => 'date',
         'received_date' => 'date',
     ];
 
