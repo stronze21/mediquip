@@ -79,6 +79,34 @@ class Sale extends Model
         return $this->hasMany(WarrantyClaim::class);
     }
 
+    public function getTaxableGrossAmountAttribute(): float
+    {
+        if (in_array($this->tax_type, ['ewt_sales_1', 'ewt_service_2'], true)) {
+            return (float) $this->total_amount + (float) $this->tax_amount;
+        }
+
+        return max(0, (float) $this->subtotal - (float) $this->discount_amount);
+    }
+
+    public function getSubtotalAmountAttribute(): float
+    {
+        if (in_array($this->tax_type, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)) {
+            return $this->taxable_gross_amount / 1.12;
+        }
+
+        return $this->taxable_gross_amount;
+    }
+
+    public function getTaxLabelAttribute(): string
+    {
+        return match ($this->tax_type) {
+            'vat_12' => 'VAT (12% inclusive)',
+            'ewt_sales_1' => 'EWT (1% on sales, net of VAT)',
+            'ewt_service_2' => 'EWT (2% on services, net of VAT)',
+            default => 'Tax',
+        };
+    }
+
     protected static function boot()
     {
         parent::boot();

@@ -176,14 +176,40 @@ class PointOfSale extends Component
     public function calculateTaxAmount(float $amount): float
     {
         if ($this->taxType === 'vat_12') {
-            return $amount - ($amount / 1.12);
+            return $amount - $this->calculateVatExclusiveAmount($amount);
         }
 
         if (in_array($this->taxType, ['ewt_sales_1', 'ewt_service_2'], true)) {
-            return ($amount / 1.12) * ($this->taxRate / 100);
+            return $this->calculateVatExclusiveAmount($amount) * ($this->taxRate / 100);
         }
 
         return $amount * ($this->taxRate / 100);
+    }
+
+    public function calculateVatExclusiveAmount(float $amount): float
+    {
+        return $amount / 1.12;
+    }
+
+    public function taxableGrossAmount(): float
+    {
+        return max(0, $this->subtotal - $this->discountAmount);
+    }
+
+    public function displaySubtotalAmount(): float
+    {
+        if (in_array($this->taxType, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)) {
+            return $this->calculateVatExclusiveAmount($this->taxableGrossAmount());
+        }
+
+        return $this->taxableGrossAmount();
+    }
+
+    public function subtotalLabel(): string
+    {
+        return in_array($this->taxType, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)
+            ? 'Subtotal (Net of VAT):'
+            : 'Subtotal:';
     }
 
     public function calculateTotalAmount(float $amount, float $taxAmount): float
@@ -1838,7 +1864,7 @@ class PointOfSale extends Component
         }
 
         $this->recalculateDiscount();
-        $taxableAmount = max(0, $this->subtotal - $this->discountAmount);
+        $taxableAmount = $this->taxableGrossAmount();
         $this->taxAmount = $this->calculateTaxAmount($taxableAmount);
         $this->totalAmount = $this->calculateTotalAmount($taxableAmount, $this->taxAmount);
         $this->changeAmount = max(0, $this->paidAmount - $this->totalAmount);

@@ -9,11 +9,11 @@
 
     {{-- Summary Stats --}}
     <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
-        <x-mary-stat title="Total Sales" value="{{ number_format($totalSales) }}" icon="o-shopping-cart"
+        <x-mary-stat title="Total Sales" &#8369;{{ number_format($totalSales) }}" icon="o-shopping-cart"
             color="text-primary" />
-        <x-mary-stat title="Total Amount" value="₱{{ number_format($totalAmount, 2) }}" icon="o-currency-dollar"
+        <x-mary-stat title="Total Amount" &#8369;{{ number_format($totalAmount, 2) }}" icon="o-currency-dollar"
             color="text-success" />
-        <x-mary-stat title="Average Value" value="₱{{ number_format($averageValue, 2) }}" icon="o-chart-bar"
+        <x-mary-stat title="Average Value" &#8369;{{ number_format($averageValue, 2) }}" icon="o-chart-bar"
             color="text-info" />
     </div>
 
@@ -85,7 +85,7 @@
                             <td>
                                 <x-mary-badge value="{{ $sale->items->count() }} item(s)" class="badge-info badge-sm" />
                             </td>
-                            <td class="font-semibold">₱{{ number_format($sale->total_amount, 2) }}</td>
+                            <td class="font-semibold">&#8369;{{ number_format($sale->total_amount, 2) }}</td>
                             <td>
                                 <x-mary-badge value="{{ ucfirst(str_replace('_', ' ', $sale->payment_method)) }}"
                                     class="badge-{{ $sale->payment_method === 'cash' ? 'success' : ($sale->payment_method === 'card' ? 'info' : 'warning') }} badge-sm" />
@@ -202,8 +202,8 @@
                                         <td>{{ $item->product->name }}</td>
                                         <td>{{ $item->product->sku }}</td>
                                         <td>{{ $item->quantity }}</td>
-                                        <td>₱{{ number_format($item->unit_price, 2) }}</td>
-                                        <td>₱{{ number_format($item->total_price, 2) }}</td>
+                                        <td>&#8369;{{ number_format($item->unit_price, 2) }}</td>
+                                        <td>&#8369;{{ number_format($item->total_price, 2) }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -215,29 +215,29 @@
                 <div class="p-4 rounded-lg bg-base-200">
                     <div class="space-y-2">
                         <div class="flex justify-between">
-                            <span>Subtotal:</span>
-                            <span>₱{{ number_format($selectedSale->subtotal_amount, 2) }}</span>
+                            <span>{{ in_array($selectedSale->tax_type, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true) ? 'Subtotal (Net of VAT):' : 'Subtotal:' }}</span>
+                            <span>&#8369;{{ number_format($selectedSale->subtotal_amount, 2) }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Discount:</span>
-                            <span>₱{{ number_format($selectedSale->discount_amount, 2) }}</span>
+                            <span>&#8369;{{ number_format($selectedSale->discount_amount, 2) }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span>Tax:</span>
-                            <span>₱{{ number_format($selectedSale->tax_amount, 2) }}</span>
+                            <span>{{ $selectedSale->tax_label }}:</span>
+                            <span>&#8369;{{ number_format($selectedSale->tax_amount, 2) }}</span>
                         </div>
                         <div class="flex justify-between pt-2 text-lg font-bold border-t">
                             <span>Total:</span>
-                            <span>₱{{ number_format($selectedSale->total_amount, 2) }}</span>
+                            <span>&#8369;{{ number_format($selectedSale->total_amount, 2) }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span>Paid:</span>
-                            <span>₱{{ number_format($selectedSale->paid_amount, 2) }}</span>
+                            <span>&#8369;{{ number_format($selectedSale->paid_amount, 2) }}</span>
                         </div>
                         @if ($selectedSale->change_amount > 0)
                             <div class="flex justify-between">
                                 <span>Change:</span>
-                                <span>₱{{ number_format($selectedSale->change_amount, 2) }}</span>
+                                <span>&#8369;{{ number_format($selectedSale->change_amount, 2) }}</span>
                             </div>
                         @endif
                     </div>

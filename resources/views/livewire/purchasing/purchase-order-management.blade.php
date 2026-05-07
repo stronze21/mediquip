@@ -150,7 +150,7 @@
                                                 </td>
                                                 <td>
                                                     <div class="font-medium">
-                                                        PHP {{ number_format(($item['quantity'] ?? 0) * ($item['unit_cost'] ?? 0), 2) }}
+                                                        &#8369;{{ number_format(($item['quantity'] ?? 0) * ($item['unit_cost'] ?? 0), 2) }}
                                                     </div>
                                                 </td>
                                                 <td>
@@ -164,23 +164,23 @@
                                     <tfoot>
                                         @php $billing = $this->calculateBilling(); @endphp
                                         <tr>
-                                            <td colspan="3" class="text-right">Subtotal:</td>
-                                            <td>PHP {{ number_format($billing['subtotal'], 2) }}</td>
+                                            <td colspan="3" class="text-right">{{ $this->subtotalLabel() }}</td>
+                                            <td>&#8369;{{ number_format($billing['subtotal'], 2) }}</td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td colspan="3" class="text-right">{{ $this->discountLabel() }}:</td>
-                                            <td>PHP {{ number_format($billing['discount_amount'], 2) }}</td>
+                                            <td>&#8369;{{ number_format($billing['discount_amount'], 2) }}</td>
                                             <td></td>
                                         </tr>
                                         <tr>
                                             <td colspan="3" class="text-right">{{ $this->taxLabel() }}:</td>
-                                            <td>PHP {{ number_format($billing['tax_amount'], 2) }}</td>
+                                            <td>&#8369;{{ number_format($billing['tax_amount'], 2) }}</td>
                                             <td></td>
                                         </tr>
                                         <tr class="font-bold">
                                             <td colspan="3" class="text-right">Total Amount:</td>
-                                            <td>PHP {{ number_format($billing['total'], 2) }}
+                                            <td>&#8369;{{ number_format($billing['total'], 2) }}
                                             </td>
                                             <td></td>
                                         </tr>
@@ -278,7 +278,7 @@
                                 </div>
                             </td>
                             <td>
-                                <div class="font-medium">PHP {{ number_format($po->total_amount, 2) }}</div>
+                                <div class="font-medium">&#8369;{{ number_format($po->total_amount, 2) }}</div>
                             </td>
                             <td>
                                 <x-mary-badge value="{{ ucfirst($po->status) }}"
@@ -490,15 +490,15 @@
                             <div class="flex justify-between">
                                 <span class="font-medium">Total Amount:</span>
                                 <span
-                                    class="text-lg font-bold">PHP {{ number_format($viewingPO->total_amount, 2) }}</span>
+                                    class="text-lg font-bold">&#8369;{{ number_format($viewingPO->total_amount, 2) }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="font-medium">Discount:</span>
-                                <span>{{ ucfirst($viewingPO->discount_type ?? 'regular') }} - PHP {{ number_format($viewingPO->discount_amount ?? 0, 2) }}</span>
+                                <span>{{ ucfirst($viewingPO->discount_type ?? 'regular') }} - &#8369;{{ number_format($viewingPO->discount_amount ?? 0, 2) }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="font-medium">Tax:</span>
-                                <span>{{ $this->taxLabel($viewingPO->tax_type ?? 'none') }} - PHP {{ number_format($viewingPO->tax_amount ?? 0, 2) }}</span>
+                                <span>{{ $this->taxLabel($viewingPO->tax_type ?? 'none') }} - &#8369;{{ number_format($viewingPO->tax_amount ?? 0, 2) }}</span>
                             </div>
                         </div>
                     </x-mary-card>
@@ -567,8 +567,8 @@
                                         <td>{{ $item->quantity_ordered }}</td>
                                         <td>{{ $item->quantity_received }}</td>
                                         <td>{{ $item->quantity_pending }}</td>
-                                        <td>PHP {{ number_format($item->unit_cost, 2) }}</td>
-                                        <td>PHP {{ number_format($item->total_cost, 2) }}</td>
+                                        <td>&#8369;{{ number_format($item->unit_cost, 2) }}</td>
+                                        <td>&#8369;{{ number_format($item->total_cost, 2) }}</td>
                                         <td>
                                             @if ($item->quantity_received >= $item->quantity_ordered)
                                                 <x-mary-badge value="Complete" class="badge-success" />
@@ -584,7 +584,7 @@
                             <tfoot>
                                 <tr class="font-bold">
                                     <td colspan="5" class="text-right">Total:</td>
-                                    <td>PHP {{ number_format($viewingPO->items->sum('total_cost'), 2) }}</td>
+                                    <td>&#8369;{{ number_format($viewingPO->items->sum('total_cost'), 2) }}</td>
                                     <td></td>
                                 </tr>
                             </tfoot>

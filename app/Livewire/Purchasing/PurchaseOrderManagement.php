@@ -673,10 +673,15 @@ class PurchaseOrderManagement extends Component
         $discountAmount = $subtotal * ($discountValue / 100);
         $taxRate = $this->taxRateForType($this->tax_type);
         $taxableAmount = max(0, $subtotal - $discountAmount);
+        $displaySubtotal = in_array($this->tax_type, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)
+            ? $taxableAmount / 1.12
+            : $taxableAmount;
         $taxAmount = $this->calculateTaxAmount($taxableAmount);
 
         return [
-            'subtotal' => $subtotal,
+            'subtotal' => $displaySubtotal,
+            'gross_subtotal' => $subtotal,
+            'taxable_gross_amount' => $taxableAmount,
             'discount_value' => $discountValue,
             'discount_amount' => $discountAmount,
             'tax_rate' => $taxRate,
@@ -742,6 +747,13 @@ class PurchaseOrderManagement extends Component
             'ewt_service_2' => 'EWT (2% on services, net of VAT)',
             default => 'No Tax',
         };
+    }
+
+    public function subtotalLabel(): string
+    {
+        return in_array($this->tax_type, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)
+            ? 'Subtotal (Net of VAT):'
+            : 'Subtotal:';
     }
 
     /**

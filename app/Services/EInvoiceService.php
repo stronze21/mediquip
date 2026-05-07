@@ -50,7 +50,8 @@ class EInvoiceService
                 ];
             })->all(),
             'totals' => [
-                'subtotal' => $this->money($sale->subtotal),
+                'subtotal' => $this->money($sale->subtotal_amount),
+                'gross_amount' => $this->money($sale->taxable_gross_amount),
                 'discount_amount' => $this->money($sale->discount_amount),
                 'tax_type' => $sale->tax_type ?? 'vat_12',
                 'tax_rate' => $this->money($sale->tax_rate ?? 12),

@@ -179,8 +179,8 @@
                     </td>
                     <td>{{ $item->product->sku }}</td>
                     <td class="qty">{{ $item->quantity }}</td>
-                    <td class="price">₱{{ number_format($item->unit_price, 2) }}</td>
-                    <td class="total">₱{{ number_format($item->total_price, 2) }}</td>
+                    <td class="price">&#8369;{{ number_format($item->unit_price, 2) }}</td>
+                    <td class="total">&#8369;{{ number_format($item->total_price, 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -189,33 +189,33 @@
     <div class="totals">
         <table>
             <tr>
-                <td>Subtotal:</td>
-                <td style="text-align: right;">₱{{ number_format($sale->subtotal_amount, 2) }}</td>
+                <td>{{ in_array($sale->tax_type, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true) ? 'Subtotal (Net of VAT):' : 'Subtotal:' }}</td>
+                <td style="text-align: right;">&#8369;{{ number_format($sale->subtotal_amount, 2) }}</td>
             </tr>
             @if ($sale->discount_amount > 0)
                 <tr>
                     <td>Discount:</td>
-                    <td style="text-align: right;">-₱{{ number_format($sale->discount_amount, 2) }}</td>
+                    <td style="text-align: right;">-&#8369;{{ number_format($sale->discount_amount, 2) }}</td>
                 </tr>
             @endif
             @if ($sale->tax_amount > 0)
                 <tr>
-                    <td>Tax:</td>
-                    <td style="text-align: right;">₱{{ number_format($sale->tax_amount, 2) }}</td>
+                    <td>{{ $sale->tax_label }}:</td>
+                    <td style="text-align: right;">&#8369;{{ number_format($sale->tax_amount, 2) }}</td>
                 </tr>
             @endif
             <tr class="total-row">
                 <td>Total:</td>
-                <td style="text-align: right;">₱{{ number_format($sale->total_amount, 2) }}</td>
+                <td style="text-align: right;">&#8369;{{ number_format($sale->total_amount, 2) }}</td>
             </tr>
             <tr>
                 <td>Amount Paid:</td>
-                <td style="text-align: right;">₱{{ number_format($sale->paid_amount, 2) }}</td>
+                <td style="text-align: right;">&#8369;{{ number_format($sale->paid_amount, 2) }}</td>
             </tr>
             @if ($sale->change_amount > 0)
                 <tr>
                     <td>Change:</td>
-                    <td style="text-align: right;">₱{{ number_format($sale->change_amount, 2) }}</td>
+                    <td style="text-align: right;">&#8369;{{ number_format($sale->change_amount, 2) }}</td>
                 </tr>
             @endif
         </table>

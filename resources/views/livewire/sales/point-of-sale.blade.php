@@ -16,7 +16,7 @@
                 @if ($currentShift)
                     <div class="text-right">
                         <div class="text-sm font-medium">{{ $currentShift->total_transactions }} transactions</div>
-                        <div class="text-sm text-base-600">₱{{ number_format($currentShift->total_sales, 2) }} total
+                        <div class="text-sm text-base-600">&#8369;{{ number_format($currentShift->total_sales, 2) }} total
                         </div>
                     </div>
                 @endif
@@ -84,7 +84,7 @@
                                             <div class="flex-1 min-w-0">
                                                 <div class="font-medium truncate">{{ $product['name'] }}</div>
                                                 <div class="text-sm truncate text-base-500">{{ $product['sku'] }} |
-                                                    ₱{{ number_format($product['selling_price'], 2) }}</div>
+                                                    &#8369;{{ number_format($product['selling_price'], 2) }}</div>
                                                 @php
                                                     $stock = $product['inventory'][0]['quantity_available'] ?? 0;
                                                 @endphp
@@ -133,7 +133,7 @@
                                     <div class="flex-1">
                                         <div class="font-medium">{{ $service->name }}</div>
                                         <div class="text-sm text-base-content/60">
-                                            {{ $service->code }} • {{ $service->service_type }} •
+                                            {{ $service->code }} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ {{ $service->service_type }} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢
                                             {{ $service->formatted_duration }}
                                         </div>
                                         @if ($service->description)
@@ -205,12 +205,12 @@
                                             $required = $item['quantity'];
                                         @endphp
                                         @if ($serialCount === $required)
-                                            <span class="text-success">✓ {{ $serialCount }}/{{ $required }}
+                                            <span class="text-success">ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ {{ $serialCount }}/{{ $required }}
                                                 serials</span>
                                         @elseif(!$selectedCustomer)
-                                            <span class="text-error">⚠ Customer required for serials</span>
+                                            <span class="text-error">ÃƒÂ¢Ã…Â¡Ã‚Â  Customer required for serials</span>
                                         @else
-                                            <span class="text-warning">⚠ {{ $serialCount }}/{{ $required }}
+                                            <span class="text-warning">ÃƒÂ¢Ã…Â¡Ã‚Â  {{ $serialCount }}/{{ $required }}
                                                 serials</span>
                                         @endif
                                     </div>
@@ -258,14 +258,14 @@
                                     {{-- Services have fixed price --}}
                                     <div class="w-32">
                                         <div class="text-sm text-right text-base-500">
-                                            ₱{{ number_format($item['price'], 2) }}
+                                            &#8369;{{ number_format($item['price'], 2) }}
                                         </div>
                                     </div>
                                 @endif
 
                                 {{-- Subtotal --}}
                                 <div class="w-20 font-bold text-right">
-                                    ₱{{ number_format($item['subtotal'], 2) }}
+                                    &#8369;{{ number_format($item['subtotal'], 2) }}
                                 </div>
 
                                 {{-- Remove Button --}}
@@ -346,25 +346,25 @@
                         <span class="font-medium">{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span class="font-medium">₱{{ number_format($subtotal, 2) }}</span>
+                        <span>{{ $this->subtotalLabel() }}</span>
+                        <span class="font-medium">&#8369;{{ number_format($this->displaySubtotalAmount(), 2) }}</span>
                     </div>
 
                     @if ($discountAmount > 0)
                         <div class="flex justify-between text-success">
                             <span>Discount:</span>
-                            <span class="font-medium">-₱{{ number_format($discountAmount, 2) }}</span>
+                            <span class="font-medium">-&#8369;{{ number_format($discountAmount, 2) }}</span>
                         </div>
                     @endif
 
                     <div class="flex justify-between">
                         <span>{{ $this->taxLabel() }}:</span>
-                        <span class="font-medium">₱{{ number_format($taxAmount, 2) }}</span>
+                        <span class="font-medium">&#8369;{{ number_format($taxAmount, 2) }}</span>
                     </div>
 
                     <div class="flex justify-between pt-3 text-xl font-bold border-t">
                         <span>Total:</span>
-                        <span>₱{{ number_format($totalAmount, 2) }}</span>
+                        <span>&#8369;{{ number_format($totalAmount, 2) }}</span>
                     </div>
 
                     <div class="space-y-2">
@@ -403,7 +403,7 @@
                         wire:click="selectPrice('{{ $priceType }}')">
                         <span class="font-medium">{{ $priceData['label'] }}</span>
                         <span
-                            class="text-lg font-bold text-primary">₱{{ number_format($priceData['value'], 2) }}</span>
+                            class="text-lg font-bold text-primary">&#8369;{{ number_format($priceData['value'], 2) }}</span>
                     </div>
                 @endforeach
             @endif
@@ -423,7 +423,7 @@
                         wire:click="addToCartWithPrice('{{ $priceType }}')">
                         <span class="font-medium">{{ $priceData['label'] }}</span>
                         <span
-                            class="text-lg font-bold text-primary">₱{{ number_format($priceData['value'], 2) }}</span>
+                            class="text-lg font-bold text-primary">&#8369;{{ number_format($priceData['value'], 2) }}</span>
                     </div>
                 @endforeach
             @endif
@@ -479,10 +479,10 @@
                     <div class="text-sm">
                         <p class="font-medium text-info">Shift Requirements:</p>
                         <ul class="mt-1 space-y-1 text-base-700">
-                            <li>• Count your cash drawer carefully before starting</li>
-                            <li>• This amount will be used for end-of-shift reconciliation</li>
-                            <li>• All sales will be tracked under this shift</li>
-                            <li>• You cannot process sales without an active shift</li>
+                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Count your cash drawer carefully before starting</li>
+                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ This amount will be used for end-of-shift reconciliation</li>
+                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ All sales will be tracked under this shift</li>
+                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ You cannot process sales without an active shift</li>
                         </ul>
                     </div>
                 </div>
@@ -508,22 +508,22 @@
                         <span>{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}</span>
                     </div>
                     <div class="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span>₱{{ number_format($subtotal, 2) }}</span>
+                        <span>{{ $this->subtotalLabel() }}</span>
+                        <span>&#8369;{{ number_format($this->displaySubtotalAmount(), 2) }}</span>
                     </div>
                     @if ($discountAmount > 0)
                         <div class="flex justify-between text-success">
                             <span>Discount:</span>
-                            <span>-₱{{ number_format($discountAmount, 2) }}</span>
+                            <span>-&#8369;{{ number_format($discountAmount, 2) }}</span>
                         </div>
                     @endif
                     <div class="flex justify-between">
                         <span>{{ $this->taxLabel() }}:</span>
-                        <span>₱{{ number_format($taxAmount, 2) }}</span>
+                        <span>&#8369;{{ number_format($taxAmount, 2) }}</span>
                     </div>
                     <div class="flex justify-between pt-2 text-lg font-bold border-t">
                         <span>Total:</span>
-                        <span>₱{{ number_format($totalAmount, 2) }}</span>
+                        <span>&#8369;{{ number_format($totalAmount, 2) }}</span>
                     </div>
                 </div>
             </div>
@@ -546,13 +546,13 @@
                     <div class="flex flex-wrap gap-2">
                         <x-mary-button label="Exact Amount" wire:click="setExactCash" class="btn-outline btn-sm" />
                         {{-- Quick Cash Buttons --}}
-                        <x-mary-button label="₱{{ number_format(ceil($totalAmount / 100) * 100, 0) }}"
+                        <x-mary-button &#8369;{{ number_format(ceil($totalAmount / 100) * 100, 0) }}"
                             wire:click="setQuickCash({{ ceil($totalAmount / 100) * 100 }})"
                             class="btn-outline btn-sm" />
-                        <x-mary-button label="₱{{ number_format(ceil($totalAmount / 500) * 500, 0) }}"
+                        <x-mary-button &#8369;{{ number_format(ceil($totalAmount / 500) * 500, 0) }}"
                             wire:click="setQuickCash({{ ceil($totalAmount / 500) * 500 }})"
                             class="btn-outline btn-sm" />
-                        <x-mary-button label="₱{{ number_format(ceil($totalAmount / 1000) * 1000, 0) }}"
+                        <x-mary-button &#8369;{{ number_format(ceil($totalAmount / 1000) * 1000, 0) }}"
                             wire:click="setQuickCash({{ ceil($totalAmount / 1000) * 1000 }})"
                             class="btn-outline btn-sm" />
                     </div>
@@ -563,15 +563,15 @@
                     <div class="text-sm">
                         @if ($paidAmount < $totalAmount)
                             <div class="text-error">
-                                ⚠️ Insufficient payment: ₱{{ number_format($totalAmount - $paidAmount, 2) }} remaining
+                                ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Insufficient payment: &#8369;{{ number_format($totalAmount - $paidAmount, 2) }} remaining
                             </div>
                         @elseif ($paidAmount == $totalAmount)
                             <div class="text-success">
-                                ✅ Exact payment received
+                                ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Exact payment received
                             </div>
                         @else
                             <div class="text-info">
-                                💰 Overpayment: ₱{{ number_format($changeAmount, 2) }} change due
+                                ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Overpayment: &#8369;{{ number_format($changeAmount, 2) }} change due
                             </div>
                         @endif
                     </div>
@@ -583,7 +583,7 @@
                 <div class="p-4 border rounded-lg bg-success/10 border-success/20">
                     <div class="text-center">
                         <div class="mb-2 text-2xl font-bold text-success">
-                            Change: ₱{{ number_format($changeAmount, 2) }}
+                            Change: &#8369;{{ number_format($changeAmount, 2) }}
                         </div>
                     </div>
                 </div>
@@ -623,7 +623,7 @@
                             <div class="flex items-center gap-3 p-3 border rounded-lg bg-base-200">
                                 <div class="flex-1">
                                     <div class="font-medium">{{ $item['name'] }}</div>
-                                    <div class="text-sm text-base-500">{{ $item['sku'] }} • Stock:
+                                    <div class="text-sm text-base-500">{{ $item['sku'] }} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Stock:
                                         {{ $item['available_stock'] }}</div>
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -641,7 +641,7 @@
 
                                     {{-- Price --}}
                                     <div class="text-right min-w-[4rem]">
-                                        <div class="text-sm font-semibold">₱{{ number_format($item['subtotal'], 2) }}
+                                        <div class="text-sm font-semibold">&#8369;{{ number_format($item['subtotal'], 2) }}
                                         </div>
                                     </div>
 
@@ -658,7 +658,7 @@
                     <div class="pt-2 mt-3 border-t border-base-300">
                         <div class="flex justify-between text-sm font-semibold">
                             <span>Batch Total:</span>
-                            <span>₱{{ number_format(collect($scannedItems)->sum('subtotal'), 2) }}</span>
+                            <span>&#8369;{{ number_format(collect($scannedItems)->sum('subtotal'), 2) }}</span>
                         </div>
                     </div>
                 </div>
@@ -681,7 +681,7 @@
                         @foreach (array_slice($cartItems, -3, 3, true) as $key => $item)
                             <div class="flex justify-between text-xs text-primary-700">
                                 <span class="truncate">{{ $item['name'] }}</span>
-                                <span>{{ $item['quantity'] }}x ₱{{ number_format($item['price'], 2) }}</span>
+                                <span>{{ $item['quantity'] }}x &#8369;{{ number_format($item['price'], 2) }}</span>
                             </div>
                         @endforeach
                         @if (count($cartItems) > 3)
@@ -692,7 +692,7 @@
                     <div class="pt-2 mt-2 border-t border-primary/20">
                         <div class="flex justify-between text-sm font-semibold text-primary-800">
                             <span>Cart Total:</span>
-                            <span>₱{{ number_format($totalAmount, 2) }}</span>
+                            <span>&#8369;{{ number_format($totalAmount, 2) }}</span>
                         </div>
                     </div>
                 @else
@@ -723,7 +723,7 @@
                             <div>
                                 <div class="font-medium">{{ $customer['name'] }}</div>
                                 <div class="text-sm text-base-500">
-                                    {{ $customer['email'] ?? 'No email' }} • {{ $customer['phone'] ?? 'No phone' }}
+                                    {{ $customer['email'] ?? 'No email' }} ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ {{ $customer['phone'] ?? 'No phone' }}
                                 </div>
                             </div>
                         </div>
@@ -767,7 +767,7 @@
             <div class="p-3 rounded-lg bg-base-200">
                 <div class="flex justify-between text-sm">
                     <span>Current Subtotal:</span>
-                    <span class="font-semibold">₱{{ number_format($subtotal, 2) }}</span>
+                    <span class="font-semibold">&#8369;{{ number_format($subtotal, 2) }}</span>
                 </div>
             </div>
 
@@ -779,7 +779,7 @@
                             <span>Current Discount:</span>
                             <span class="font-semibold">
                                 {{ $this->discountLabel() }}
-                                = -₱{{ number_format($discountAmount, 2) }}
+                                = -&#8369;{{ number_format($discountAmount, 2) }}
                             </span>
                         </div>
                     </div>
@@ -790,7 +790,7 @@
                 ['id' => 'senior', 'name' => 'Senior Citizen Discount (20%)'],
                 ['id' => 'pwd', 'name' => 'PWD Discount (20%)'],
                 ['id' => 'percentage', 'name' => 'Percentage (%)'],
-                ['id' => 'fixed', 'name' => 'Fixed Amount (₱)'],
+                ['id' => 'fixed', 'name' => 'Fixed Amount (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)'],
             ]" wire:model.live="discountType" />
 
             <x-mary-input label="Discount Value" wire:model.live="discountValue" type="number" step="0.01"
@@ -802,17 +802,17 @@
                     <div class="text-center">
                         <div class="text-lg font-bold text-info">
                             Preview:
-                            -₱{{ number_format($this->calculateDiscountAmount(), 2) }}
+                            -&#8369;{{ number_format($this->calculateDiscountAmount(), 2) }}
                         </div>
                     </div>
                 </div>
 
                 {{-- Validation warnings --}}
                 @if ($discountType === 'percentage' && $discountValue > 100)
-                    <div class="text-sm text-error">⚠️ Percentage cannot exceed 100%</div>
+                    <div class="text-sm text-error">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Percentage cannot exceed 100%</div>
                 @endif
                 @if ($discountType === 'fixed' && $discountValue > $subtotal)
-                    <div class="text-sm text-warning">⚠️ Fixed discount will be limited to subtotal amount</div>
+                    <div class="text-sm text-warning">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Fixed discount will be limited to subtotal amount</div>
                 @endif
             @endif
         </div>
@@ -840,9 +840,9 @@
                     <div class="text-sm">
                         <p class="font-medium text-warning">Hold Sale Information:</p>
                         <ul class="mt-1 space-y-1 text-base-700">
-                            <li>• Current cart will be saved and cleared</li>
-                            <li>• You can retrieve this sale later from "Held Sales"</li>
-                            <li>• Customer and discount information will be preserved</li>
+                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Current cart will be saved and cleared</li>
+                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ You can retrieve this sale later from "Held Sales"</li>
+                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Customer and discount information will be preserved</li>
                         </ul>
                     </div>
                 </div>
@@ -878,7 +878,7 @@
                                 <td class="font-medium">{{ $heldSale['invoice_number'] }}</td>
                                 <td>{{ $heldSale['customer_name'] }}</td>
                                 <td>{{ $heldSale['items_count'] }} items</td>
-                                <td class="font-bold">₱{{ number_format($heldSale['total_amount'], 2) }}</td>
+                                <td class="font-bold">&#8369;{{ number_format($heldSale['total_amount'], 2) }}</td>
                                 <td class="text-sm">{{ $heldSale['created_at'] }}</td>
                                 <td class="text-sm">
                                     @if ($heldSale['notes'])
@@ -936,12 +936,12 @@
                     </div>
                     <div class="flex justify-between">
                         <span>Amount Paid:</span>
-                        <span>₱{{ number_format($lastPaidAmount ?? 0, 2) }}</span>
+                        <span>&#8369;{{ number_format($lastPaidAmount ?? 0, 2) }}</span>
                     </div>
                     @if (($lastChangeAmount ?? 0) > 0)
                         <div class="flex justify-between font-medium text-success">
                             <span>Change Given:</span>
-                            <span>₱{{ number_format($lastChangeAmount ?? 0, 2) }}</span>
+                            <span>&#8369;{{ number_format($lastChangeAmount ?? 0, 2) }}</span>
                         </div>
                     @endif
                 </div>
