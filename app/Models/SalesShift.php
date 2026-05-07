@@ -89,7 +89,8 @@ class SalesShift extends Model
         $this->update([
             'total_transactions' => $baseQuery->count(),
             'total_sales' => $baseQuery->sum('total_amount'),
-            'cash_sales' => (clone $baseQuery)->where('payment_method', 'cash')->sum('total_amount'),
+            'cash_sales' => (clone $baseQuery)->where('payment_method', 'cash')->sum('total_amount')
+                + (clone $baseQuery)->where('payment_method', 'terms')->sum('paid_amount'),
             'card_sales' => (clone $baseQuery)->where('payment_method', 'card')->sum('total_amount'),
             'other_sales' => (clone $baseQuery)->whereNotIn('payment_method', ['cash', 'card'])->sum('total_amount'),
         ]);

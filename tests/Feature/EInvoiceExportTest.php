@@ -56,7 +56,30 @@ class EInvoiceExportTest extends TestCase
         $this->assertStringContainsString('<Sku>MED-001</Sku>', $xml);
     }
 
-    private function createCompletedSale(): Sale
+    public function test_payment_terms_sale_exports_receivable_details(): void
+    {
+        $sale = $this->createCompletedSale([
+            'paid_amount' => 500,
+            'payment_method' => 'terms',
+            'payment_terms' => 'Net 30',
+            'due_date' => now()->addDays(30)->toDateString(),
+            'payment_status' => 'partial',
+        ]);
+
+        $response = $this
+            ->actingAs($sale->user)
+            ->get(route('invoice.e-invoice.json', $sale));
+
+        $payload = json_decode($response->streamedContent(), true);
+
+        $response->assertOk();
+        $this->assertSame('terms', $payload['invoice']['payment_method']);
+        $this->assertSame('Net 30', $payload['invoice']['payment_terms']);
+        $this->assertSame('partial', $payload['invoice']['payment_status']);
+        $this->assertSame('1000.00', $payload['totals']['balance_due']);
+    }
+
+    private function createCompletedSale(array $overrides = []): Sale
     {
         $user = User::factory()->create([
             'role' => 'cashier',
@@ -91,7 +114,7 @@ class EInvoiceExportTest extends TestCase
             'selling_price' => 1500,
         ]);
 
-        $sale = Sale::create([
+        $sale = Sale::create(array_merge([
             'invoice_number' => 'INV-TEST-0001',
             'customer_id' => $customer->id,
             'warehouse_id' => $warehouse->id,
@@ -105,7 +128,7 @@ class EInvoiceExportTest extends TestCase
             'payment_method' => 'cash',
             'status' => 'completed',
             'completed_at' => now(),
-        ]);
+        ], $overrides));
 
         SaleItem::create([
             'sale_id' => $sale->id,

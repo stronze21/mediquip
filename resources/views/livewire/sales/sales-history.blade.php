@@ -87,8 +87,14 @@
                             </td>
                             <td class="font-semibold">&#8369;{{ number_format($sale->total_amount, 2) }}</td>
                             <td>
-                                <x-mary-badge value="{{ ucfirst(str_replace('_', ' ', $sale->payment_method)) }}"
+                                <x-mary-badge value="{{ $sale->payment_method_label }}"
                                     class="badge-{{ $sale->payment_method === 'cash' ? 'success' : ($sale->payment_method === 'card' ? 'info' : 'warning') }} badge-sm" />
+                                @if ($sale->payment_method === 'terms')
+                                    <div class="mt-1 text-xs text-warning">
+                                        {{ ucfirst($sale->payment_status ?? 'unpaid') }}:
+                                        &#8369;{{ number_format($sale->outstanding_balance, 2) }}
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 <x-mary-badge value="{{ ucfirst($sale->status) }}"
@@ -177,7 +183,14 @@
                                 <div><strong>Phone:</strong> {{ $selectedSale->customer->phone ?? 'N/A' }}</div>
                             @endif
                             <div><strong>Payment:</strong>
-                                {{ ucfirst(str_replace('_', ' ', $selectedSale->payment_method)) }}</div>
+                                {{ $selectedSale->payment_method_label }}</div>
+                            @if ($selectedSale->payment_method === 'terms')
+                                <div><strong>Terms:</strong> {{ $selectedSale->payment_terms ?? 'N/A' }}</div>
+                                <div><strong>Due Date:</strong>
+                                    {{ $selectedSale->due_date?->format('M d, Y') ?? 'N/A' }}</div>
+                                <div><strong>Payment Status:</strong>
+                                    {{ ucfirst($selectedSale->payment_status ?? 'unpaid') }}</div>
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -238,6 +251,12 @@
                             <div class="flex justify-between">
                                 <span>Change:</span>
                                 <span>&#8369;{{ number_format($selectedSale->change_amount, 2) }}</span>
+                            </div>
+                        @endif
+                        @if ($selectedSale->outstanding_balance > 0)
+                            <div class="flex justify-between font-semibold text-warning">
+                                <span>Balance Due:</span>
+                                <span>&#8369;{{ number_format($selectedSale->outstanding_balance, 2) }}</span>
                             </div>
                         @endif
                     </div>

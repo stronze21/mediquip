@@ -145,7 +145,12 @@
             <p><strong>Date:</strong> {{ $sale->created_at->format('M d, Y H:i') }}</p>
             <p><strong>Warehouse:</strong> {{ $sale->warehouse->name }}</p>
             <p><strong>Cashier:</strong> {{ $sale->user->name }}</p>
-            <p><strong>Payment Method:</strong> {{ ucfirst(str_replace('_', ' ', $sale->payment_method)) }}</p>
+            <p><strong>Payment Method:</strong> {{ $sale->payment_method_label }}</p>
+            @if ($sale->payment_method === 'terms')
+                <p><strong>Payment Terms:</strong> {{ $sale->payment_terms ?? 'N/A' }}</p>
+                <p><strong>Due Date:</strong> {{ $sale->due_date?->format('M d, Y') ?? 'N/A' }}</p>
+                <p><strong>Payment Status:</strong> {{ ucfirst($sale->payment_status ?? 'unpaid') }}</p>
+            @endif
         </div>
 
         <div class="customer-details">
@@ -175,9 +180,9 @@
             @foreach ($sale->items as $item)
                 <tr>
                     <td>
-                        <strong>{{ $item->product->name }}</strong>
+                        <strong>{{ $item->product_name }}</strong>
                     </td>
-                    <td>{{ $item->product->sku }}</td>
+                    <td>{{ $item->product_sku }}</td>
                     <td class="qty">{{ $item->quantity }}</td>
                     <td class="price">&#8369;{{ number_format($item->unit_price, 2) }}</td>
                     <td class="total">&#8369;{{ number_format($item->total_price, 2) }}</td>
@@ -216,6 +221,12 @@
                 <tr>
                     <td>Change:</td>
                     <td style="text-align: right;">&#8369;{{ number_format($sale->change_amount, 2) }}</td>
+                </tr>
+            @endif
+            @if ($sale->outstanding_balance > 0)
+                <tr>
+                    <td>Balance Due:</td>
+                    <td style="text-align: right;">&#8369;{{ number_format($sale->outstanding_balance, 2) }}</td>
                 </tr>
             @endif
         </table>

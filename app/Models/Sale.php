@@ -27,6 +27,9 @@ class Sale extends Model
         'paid_amount',
         'change_amount',
         'payment_method',
+        'payment_terms',
+        'due_date',
+        'payment_status',
         'status',
         'notes',
         'completed_at'
@@ -40,6 +43,7 @@ class Sale extends Model
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'change_amount' => 'decimal:2',
+        'due_date' => 'date',
         'completed_at' => 'datetime',
     ];
 
@@ -105,6 +109,18 @@ class Sale extends Model
             'ewt_service_2' => 'EWT (2% on services, net of VAT)',
             default => 'Tax',
         };
+    }
+
+    public function getOutstandingBalanceAttribute(): float
+    {
+        return max(0, (float) $this->total_amount - (float) $this->paid_amount);
+    }
+
+    public function getPaymentMethodLabelAttribute(): string
+    {
+        return $this->payment_method === 'terms'
+            ? 'Payment Terms'
+            : ucfirst(str_replace('_', ' ', $this->payment_method));
     }
 
     protected static function boot()

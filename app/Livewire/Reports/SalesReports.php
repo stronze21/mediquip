@@ -183,6 +183,8 @@ class SalesReports extends Component
             'card_sales' => $sales->where('payment_method', 'card')->sum('total_amount'),
             'gcash_sales' => $sales->where('payment_method', 'gcash')->sum('total_amount'),
             'bank_transfer_sales' => $sales->where('payment_method', 'bank_transfer')->sum('total_amount'),
+            'terms_sales' => $sales->where('payment_method', 'terms')->sum('total_amount'),
+            'outstanding_balance' => $sales->sum(fn($sale) => $sale->outstanding_balance),
             'total_items_sold' => $sales->sum(function ($sale) {
                 return $sale->items->sum('quantity');
             }),
@@ -331,7 +333,9 @@ class SalesReports extends Component
             ->get()
             ->map(function ($item) {
                 return [
-                    'method' => ucfirst(str_replace('_', ' ', $item->payment_method)),
+                    'method' => $item->payment_method === 'terms'
+                        ? 'Payment Terms'
+                        : ucfirst(str_replace('_', ' ', $item->payment_method)),
                     'count' => $item->count,
                     'total_amount' => $item->total_amount,
                     'avg_amount' => $item->avg_amount,
@@ -528,6 +532,7 @@ class SalesReports extends Component
             ['id' => 'card', 'name' => 'Credit/Debit Card'],
             ['id' => 'gcash', 'name' => 'GCash'],
             ['id' => 'bank_transfer', 'name' => 'Bank Transfer'],
+            ['id' => 'terms', 'name' => 'Payment Terms'],
         ];
 
         $statusOptions = [

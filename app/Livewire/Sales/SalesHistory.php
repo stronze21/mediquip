@@ -62,6 +62,7 @@ class SalesHistory extends Component
                 ['id' => 'card', 'name' => 'Credit/Debit Card'],
                 ['id' => 'gcash', 'name' => 'GCash'],
                 ['id' => 'bank_transfer', 'name' => 'Bank Transfer'],
+                ['id' => 'terms', 'name' => 'Payment Terms'],
             ],
             'dates' => [
                 ['id' => '', 'name' => 'All Time'],

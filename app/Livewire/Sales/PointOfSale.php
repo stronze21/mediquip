@@ -38,6 +38,8 @@ class PointOfSale extends Component
     public $selectedCustomer = null;
     public $selectedWarehouse = '';
     public $paymentMethod = 'cash';
+    public $paymentTerms = 'Due on receipt';
+    public $paymentDueDate = '';
     public $saleNotes = '';
     public $invoiceType = 'sales';
 
@@ -846,9 +848,41 @@ class PointOfSale extends Component
         $this->calculateChange();
     }
 
+    public function updatedPaymentMethod()
+    {
+        if ($this->paymentMethod === 'terms') {
+            $this->changeAmount = 0;
+            $this->paymentDueDate = $this->paymentDueDate ?: now()->addDays(30)->format('Y-m-d');
+            return;
+        }
+
+        $this->paymentTerms = 'Due on receipt';
+        $this->paymentDueDate = '';
+        $this->calculateChange();
+    }
+
+    public function updatedPaymentTerms()
+    {
+        if ($this->paymentMethod !== 'terms') {
+            return;
+        }
+
+        $days = match ($this->paymentTerms) {
+            'Net 7' => 7,
+            'Net 15' => 15,
+            'Net 30' => 30,
+            'Net 60' => 60,
+            default => 0,
+        };
+
+        $this->paymentDueDate = now()->addDays($days)->format('Y-m-d');
+    }
+
     public function calculateChange()
     {
-        $this->changeAmount = max(0, $this->paidAmount - $this->totalAmount);
+        $this->changeAmount = $this->paymentMethod === 'terms'
+            ? 0
+            : max(0, (float) $this->paidAmount - $this->totalAmount);
     }
 
     #[On('open-payment-modal')]
@@ -890,6 +924,8 @@ class PointOfSale extends Component
 
         $this->paidAmount = '';
         $this->paymentMethod = 'cash';
+        $this->paymentTerms = 'Due on receipt';
+        $this->paymentDueDate = '';
         $this->saleNotes = '';
         $this->showPaymentModal = true;
     }
@@ -897,10 +933,33 @@ class PointOfSale extends Component
     {
         if (!$this->checkActiveShift()) return;
 
-        if ($this->paidAmount < $this->totalAmount) {
+        $this->paidAmount = (float) ($this->paidAmount ?: 0);
+        $usesPaymentTerms = $this->paymentMethod === 'terms';
+
+        if (!$usesPaymentTerms && $this->paidAmount < $this->totalAmount) {
             $this->error('Insufficient payment amount.');
             return;
         }
+
+        if ($usesPaymentTerms && !$this->selectedCustomer) {
+            $this->error('Please select a customer before using payment terms.');
+            return;
+        }
+
+        if ($usesPaymentTerms && empty($this->paymentDueDate)) {
+            $this->error('Please set a due date for the payment terms.');
+            return;
+        }
+
+        if ($usesPaymentTerms && $this->paidAmount > $this->totalAmount) {
+            $this->error('Amount received cannot exceed the invoice total for payment terms.');
+            return;
+        }
+
+        $paymentStatus = $this->paidAmount <= 0
+            ? 'unpaid'
+            : ($this->paidAmount < $this->totalAmount ? 'partial' : 'paid');
+        $this->changeAmount = $usesPaymentTerms ? 0 : $this->changeAmount;
 
         try {
             DB::beginTransaction();
@@ -960,6 +1019,9 @@ class PointOfSale extends Component
                 'paid_amount' => $this->paidAmount,
                 'change_amount' => $this->changeAmount,
                 'payment_method' => $this->paymentMethod,
+                'payment_terms' => $usesPaymentTerms ? $this->paymentTerms : null,
+                'due_date' => $usesPaymentTerms ? $this->paymentDueDate : null,
+                'payment_status' => $usesPaymentTerms ? $paymentStatus : 'paid',
                 'status' => 'completed',
                 'notes' => $this->saleNotes,
                 'completed_at' => now(),
@@ -988,7 +1050,7 @@ class PointOfSale extends Component
 
             DB::commit();
 
-            $this->success('Invoice completed successfully! Invoice: ' . $sale->invoice_number);
+            $this->success(($usesPaymentTerms ? 'Invoice completed with payment terms! Invoice: ' : 'Invoice completed successfully! Invoice: ') . $sale->invoice_number);
             $this->resetSale();
             $this->showPaymentModal = false;
         } catch (\Exception $e) {
@@ -1208,6 +1270,10 @@ class PointOfSale extends Component
         $this->discountValue = '';
         $this->discountAmount = 0;
         $this->paidAmount = 0;
+        $this->changeAmount = 0;
+        $this->paymentMethod = 'cash';
+        $this->paymentTerms = 'Due on receipt';
+        $this->paymentDueDate = '';
         $this->saleNotes = '';
         $this->updateCartTotals();
     }
@@ -1867,6 +1933,6 @@ class PointOfSale extends Component
         $taxableAmount = $this->taxableGrossAmount();
         $this->taxAmount = $this->calculateTaxAmount($taxableAmount);
         $this->totalAmount = $this->calculateTotalAmount($taxableAmount, $this->taxAmount);
-        $this->changeAmount = max(0, $this->paidAmount - $this->totalAmount);
+        $this->calculateChange();
     }
 }

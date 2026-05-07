@@ -77,6 +77,8 @@ class SalesSummarySheet implements FromCollection, WithTitle, WithHeadings, With
             ['Card Sales', $sales->where('payment_method', 'card')->sum('total_amount')],
             ['GCash Sales', $sales->where('payment_method', 'gcash')->sum('total_amount')],
             ['Bank Transfer Sales', $sales->where('payment_method', 'bank_transfer')->sum('total_amount')],
+            ['Payment Terms Sales', $sales->where('payment_method', 'terms')->sum('total_amount')],
+            ['Outstanding Balance', $sales->sum(fn($sale) => $sale->outstanding_balance)],
             [''],
             ['PROFIT ANALYSIS', ''],
         ];
@@ -399,7 +401,7 @@ class DetailedSalesSheet implements FromCollection, WithTitle, WithHeadings, Wit
                     'customer' => $sale->customer?->name ?? 'Walk-in Customer',
                     'staff' => $sale->user?->name ?? 'Unknown',
                     'warehouse' => $sale->warehouse?->name ?? 'Unknown',
-                    'payment_method' => ucfirst(str_replace('_', ' ', $sale->payment_method)),
+                    'payment_method' => $sale->payment_method_label,
                     'items_count' => $sale->items->sum('quantity'),
                     'subtotal' => $sale->subtotal,
                     'discount' => $sale->discount_amount,

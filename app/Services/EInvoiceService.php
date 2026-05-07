@@ -21,6 +21,9 @@ class EInvoiceService
                 'issued_at' => optional($sale->completed_at ?? $sale->created_at)->toIso8601String(),
                 'currency' => 'PHP',
                 'payment_method' => $sale->payment_method,
+                'payment_terms' => $sale->payment_terms,
+                'due_date' => optional($sale->due_date)->toDateString(),
+                'payment_status' => $sale->payment_status,
             ],
             'seller' => [
                 'name' => config('app.name'),
@@ -59,6 +62,7 @@ class EInvoiceService
                 'total_amount' => $this->money($sale->total_amount),
                 'paid_amount' => $this->money($sale->paid_amount),
                 'change_amount' => $this->money($sale->change_amount),
+                'balance_due' => $this->money($sale->outstanding_balance),
             ],
             'metadata' => [
                 'generated_at' => now()->toIso8601String(),

@@ -534,13 +534,36 @@
                 ['value' => 'card', 'label' => 'Credit/Debit Card'],
                 ['value' => 'gcash', 'label' => 'GCash'],
                 ['value' => 'bank_transfer', 'label' => 'Bank Transfer'],
+                ['value' => 'terms', 'label' => 'Payment Terms'],
             ]" wire:model.live="paymentMethod"
                 option-label="label" option-value="value" />
 
+            @if ($paymentMethod === 'terms')
+                <div class="p-3 border rounded-lg bg-warning/10 border-warning/20">
+                    <div class="text-sm text-warning">
+                        Payment terms require a selected customer. The invoice will be completed with an outstanding
+                        balance until fully paid.
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <x-mary-select label="Terms" :options="[
+                        ['value' => 'Due on receipt', 'label' => 'Due on receipt'],
+                        ['value' => 'Net 7', 'label' => 'Net 7'],
+                        ['value' => 'Net 15', 'label' => 'Net 15'],
+                        ['value' => 'Net 30', 'label' => 'Net 30'],
+                        ['value' => 'Net 60', 'label' => 'Net 60'],
+                    ]" wire:model.live="paymentTerms" option-label="label" option-value="value" />
+
+                    <x-mary-input label="Due Date" wire:model="paymentDueDate" type="date" />
+                </div>
+            @endif
+
             {{-- Payment Amount --}}
             <div class="space-y-2">
-                <x-mary-input label="Amount Received" wire:model.live="paidAmount" type="number" step="0.01"
-                    class="{{ $paidAmount < $totalAmount ? 'input-error' : ($changeAmount > 0 ? 'input-success' : '') }}" />
+                <x-mary-input label="{{ $paymentMethod === 'terms' ? 'Initial Payment (Optional)' : 'Amount Received' }}"
+                    wire:model.live="paidAmount" type="number" step="0.01"
+                    class="{{ $paymentMethod !== 'terms' && $paidAmount < $totalAmount ? 'input-error' : ($changeAmount > 0 ? 'input-success' : '') }}" />
 
                 @if ($paymentMethod === 'cash')
                     <div class="flex flex-wrap gap-2">
@@ -559,7 +582,11 @@
                 @endif
 
                 {{-- Payment Status Indicator --}}
-                @if ($paidAmount > 0)
+                @if ($paymentMethod === 'terms')
+                    <div class="text-sm text-warning">
+                        Outstanding balance: &#8369;{{ number_format(max(0, $totalAmount - (float) ($paidAmount ?: 0)), 2) }}
+                    </div>
+                @elseif ($paidAmount > 0)
                     <div class="text-sm">
                         @if ($paidAmount < $totalAmount)
                             <div class="text-error">
@@ -596,7 +623,8 @@
 
         <x-slot:actions>
             <x-mary-button label="Cancel" wire:click="$set('showPaymentModal', false)" />
-            <x-mary-button label="Complete Invoice" wire:click="completeSale" class="btn-success" :disabled="$paidAmount < $totalAmount" />
+            <x-mary-button label="Complete Invoice" wire:click="completeSale" class="btn-success"
+                :disabled="$paymentMethod !== 'terms' && $paidAmount < $totalAmount" />
         </x-slot:actions>
     </x-mary-modal>
 
