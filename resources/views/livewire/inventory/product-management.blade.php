@@ -122,7 +122,7 @@
                 <h4 class="text-lg font-semibold">Basic Information</h4>
 
                 <x-mary-input label="Product Name" wire:model="name" placeholder="Enter product name"
-                    hint="Include compatible models separated with a slash `/` e.g NMAX/PCX/M3" />
+                    hint="Include compatible models separated with a slash `/` e.g CMS8000/BeneHeart D3/V60" />
 
                 <div class="grid grid-cols-2 gap-3">
                     <div>

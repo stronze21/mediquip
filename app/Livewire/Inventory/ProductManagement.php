@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\Subcategory;
 use App\Models\Warehouse;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -80,17 +81,35 @@ class ProductManagement extends Component
 
     public $availableLocations = [];
 
-    protected $rules = [
-        'name' => 'required|string|max:255',
-        'sku' => 'required|string|max:100|unique:products,sku',
-        'product_type' => 'required|in:medical_equipment,medical_supply,drug_medicine',
-        'category_id' => 'required|exists:categories,id',
-        'cost_price' => 'required|numeric|min:0',
-        'selling_price' => 'required|numeric|min:0',
-        'min_stock_level' => 'required|integer|min:0',
-        'status' => 'required|in:active,inactive,discontinued',
-        'productImage' => 'nullable|image|max:2048',
-    ];
+    protected function rules(): array
+    {
+        $productId = $this->editMode && $this->selectedProduct
+            ? $this->selectedProduct->id
+            : null;
+
+        return [
+            'name' => 'required|string|max:255',
+            'sku' => [
+                'required',
+                'string',
+                'max:100',
+                Rule::unique('products', 'sku')->ignore($productId),
+            ],
+            'barcode' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('products', 'barcode')->ignore($productId),
+            ],
+            'product_type' => 'required|in:medical_equipment,medical_supply,drug_medicine',
+            'category_id' => 'required|exists:categories,id',
+            'cost_price' => 'required|numeric|min:0',
+            'selling_price' => 'required|numeric|min:0',
+            'min_stock_level' => 'required|integer|min:0',
+            'status' => 'required|in:active,inactive,discontinued',
+            'productImage' => 'nullable|image|max:2048',
+        ];
+    }
 
     public function mount()
     {
@@ -418,17 +437,13 @@ class ProductManagement extends Component
 
     public function save()
     {
-        if ($this->editMode) {
-            $this->rules['sku'] = 'required|string|max:100|unique:products,sku,' . $this->selectedProduct->id;
-        }
-
         $this->validate();
 
         try {
             $data = [
                 'name' => $this->name,
                 'sku' => $this->sku,
-                'barcode' => $this->barcode,
+                'barcode' => $this->normalizeNullableString($this->barcode),
                 'product_type' => $this->product_type,
                 'category_id' => $this->category_id,
                 'subcategory_id' => $this->subcategory_id,
@@ -484,6 +499,17 @@ class ProductManagement extends Component
         } catch (\Exception $e) {
             $this->error('Error saving product: ' . $e->getMessage());
         }
+    }
+
+    private function normalizeNullableString($value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
     public function generateSku()

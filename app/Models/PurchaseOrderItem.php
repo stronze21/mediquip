@@ -16,7 +16,10 @@ class PurchaseOrderItem extends Model
         'quantity_ordered',
         'quantity_received',
         'unit_cost',
-        'total_cost'
+        'total_cost',
+        'tax_type',
+        'tax_rate',
+        'tax_amount',
     ];
 
     protected $casts = [
@@ -24,6 +27,8 @@ class PurchaseOrderItem extends Model
         'quantity_received' => 'integer',
         'unit_cost' => 'decimal:2',
         'total_cost' => 'decimal:2',
+        'tax_rate' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
     ];
 
     public function purchaseOrder()

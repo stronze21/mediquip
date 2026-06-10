@@ -91,7 +91,7 @@
                     {{-- Billing Section --}}
                     <div>
                         <h3 class="mb-3 text-lg font-semibold">Discounts & Taxes</h3>
-                        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <x-mary-select label="Purchase Discount" :options="[
                                 ['value' => 'regular', 'label' => 'Regular Discount'],
                                 ['value' => 'senior', 'label' => 'Senior Citizen Discount'],
@@ -101,13 +101,6 @@
                             <x-mary-input label="Discount Rate (%)" wire:model.live="discount_value" type="number"
                                 step="0.01" min="0" max="100"
                                 :disabled="in_array($discount_type, ['senior', 'pwd'], true)" />
-
-                            <x-mary-select label="Tax Rate" :options="[
-                                ['value' => 'vat_12', 'label' => 'VAT (12% inclusive)'],
-                                ['value' => 'ewt_sales_1', 'label' => 'EWT (1% on sales, net of VAT)'],
-                                ['value' => 'ewt_service_2', 'label' => 'EWT (2% on services, net of VAT)'],
-                                ['value' => 'none', 'label' => 'No Tax'],
-                            ]" wire:model.live="tax_type" option-value="value" option-label="label" />
                         </div>
                     </div>
 
@@ -126,6 +119,7 @@
                                         <tr>
                                             <th>Product</th>
                                             <th>Quantity</th>
+                                            <th>VAT</th>
                                             <th>Unit Cost</th>
                                             <th>Total</th>
                                             <th>Actions</th>
@@ -141,11 +135,16 @@
                                                         placeholder="Select product" single clearable searchable />
                                                 </td>
                                                 <td class="min-w-32">
-                                                    <x-mary-input wire:model="items.{{ $index }}.quantity"
+                                                    <x-mary-input wire:model.live="items.{{ $index }}.quantity"
                                                         type="number" min="1" />
                                                 </td>
+                                                <td class="min-w-56">
+                                                    <x-mary-select :options="$this->taxOptions()"
+                                                        wire:model.live="items.{{ $index }}.tax_type"
+                                                        option-value="value" option-label="label" />
+                                                </td>
                                                 <td class="min-w-36">
-                                                    <x-mary-input wire:model="items.{{ $index }}.unit_cost"
+                                                    <x-mary-input wire:model.live="items.{{ $index }}.unit_cost"
                                                         type="number" step="0.01" min="0" />
                                                 </td>
                                                 <td>
@@ -164,22 +163,22 @@
                                     <tfoot>
                                         @php $billing = $this->calculateBilling(); @endphp
                                         <tr>
-                                            <td colspan="3" class="text-right">{{ $this->subtotalLabel() }}</td>
+                                            <td colspan="4" class="text-right">{{ $this->subtotalLabel() }}</td>
                                             <td>&#8369;{{ number_format($billing['subtotal'], 2) }}</td>
                                             <td></td>
                                         </tr>
                                         <tr>
-                                            <td colspan="3" class="text-right">{{ $this->discountLabel() }}:</td>
+                                            <td colspan="4" class="text-right">{{ $this->discountLabel() }}:</td>
                                             <td>&#8369;{{ number_format($billing['discount_amount'], 2) }}</td>
                                             <td></td>
                                         </tr>
                                         <tr>
-                                            <td colspan="3" class="text-right">{{ $this->taxLabel() }}:</td>
+                                            <td colspan="4" class="text-right">{{ $this->taxLabel($billing['tax_type']) }}:</td>
                                             <td>&#8369;{{ number_format($billing['tax_amount'], 2) }}</td>
                                             <td></td>
                                         </tr>
                                         <tr class="font-bold">
-                                            <td colspan="3" class="text-right">Total Amount:</td>
+                                            <td colspan="4" class="text-right">Total Amount:</td>
                                             <td>&#8369;{{ number_format($billing['total'], 2) }}
                                             </td>
                                             <td></td>
@@ -550,6 +549,7 @@
                                     <th>Qty Ordered</th>
                                     <th>Qty Received</th>
                                     <th>Pending</th>
+                                    <th>VAT</th>
                                     <th>Unit Cost</th>
                                     <th>Total Cost</th>
                                     <th>Status</th>
@@ -567,6 +567,7 @@
                                         <td>{{ $item->quantity_ordered }}</td>
                                         <td>{{ $item->quantity_received }}</td>
                                         <td>{{ $item->quantity_pending }}</td>
+                                        <td>{{ $this->taxLabel($item->tax_type ?? $viewingPO->tax_type ?? 'none') }}</td>
                                         <td>&#8369;{{ number_format($item->unit_cost, 2) }}</td>
                                         <td>&#8369;{{ number_format($item->total_cost, 2) }}</td>
                                         <td>
@@ -583,7 +584,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="font-bold">
-                                    <td colspan="5" class="text-right">Total:</td>
+                                    <td colspan="6" class="text-right">Total:</td>
                                     <td>&#8369;{{ number_format($viewingPO->items->sum('total_cost'), 2) }}</td>
                                     <td></td>
                                 </tr>

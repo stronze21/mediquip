@@ -72,11 +72,11 @@ class PurchaseOrderManagement extends Component
         'notes' => 'nullable|string',
         'discount_type' => 'required|in:regular,senior,pwd',
         'discount_value' => 'nullable|numeric|min:0|max:100',
-        'tax_type' => 'required|in:none,vat_12,ewt_sales_1,ewt_service_2',
         'items' => 'required|array|min:1',
         'items.*.product_id' => 'required|exists:products,id',
         'items.*.quantity' => 'required|integer|min:1',
         'items.*.unit_cost' => 'required|numeric|min:0',
+        'items.*.tax_type' => 'required|in:none,vat_12,ewt_sales_1,ewt_service_2',
     ];
 
     public function mount()
@@ -265,11 +265,12 @@ class PurchaseOrderManagement extends Component
         $this->tax_rate = (float) ($po->tax_rate ?? $this->taxRateForType($this->tax_type));
         $this->tax_amount = (float) ($po->tax_amount ?? 0);
 
-        $this->items = $po->items->map(function ($item) {
+        $this->items = $po->items->map(function ($item) use ($po) {
             return [
                 'product_id' => $item->product_id,
                 'quantity' => $item->quantity_ordered,
                 'unit_cost' => $item->unit_cost,
+                'tax_type' => $item->tax_type ?? $po->tax_type ?? 'vat_12',
             ];
         })->toArray();
 
@@ -285,6 +286,7 @@ class PurchaseOrderManagement extends Component
             'product_id' => '',
             'quantity' => 1,
             'unit_cost' => 0,
+            'tax_type' => 'vat_12',
         ];
     }
 
@@ -314,6 +316,17 @@ class PurchaseOrderManagement extends Component
         $this->recalculateBilling();
     }
 
+    public function updatedItems(): void
+    {
+        foreach ($this->items as $index => $item) {
+            if (empty($item['tax_type'])) {
+                $this->items[$index]['tax_type'] = 'vat_12';
+            }
+        }
+
+        $this->recalculateBilling();
+    }
+
     public function save($submit = false)
     {
         $this->validate();
@@ -332,7 +345,7 @@ class PurchaseOrderManagement extends Component
                 'discount_type' => $this->discount_type,
                 'discount_value' => $billing['discount_value'],
                 'discount_amount' => $billing['discount_amount'],
-                'tax_type' => $this->tax_type,
+                'tax_type' => $billing['tax_type'],
                 'tax_rate' => $billing['tax_rate'],
                 'tax_amount' => $billing['tax_amount'],
                 'order_date' => $this->order_date,
@@ -358,6 +371,8 @@ class PurchaseOrderManagement extends Component
 
             // Create items
             foreach ($this->items as $item) {
+                $lineBilling = $this->calculateLineBilling($item, $billing['discount_value']);
+
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $po->id,
                     'product_id' => $item['product_id'],
@@ -365,6 +380,9 @@ class PurchaseOrderManagement extends Component
                     'quantity_received' => 0,
                     'unit_cost' => $item['unit_cost'],
                     'total_cost' => $item['quantity'] * $item['unit_cost'],
+                    'tax_type' => $lineBilling['tax_type'],
+                    'tax_rate' => $lineBilling['tax_rate'],
+                    'tax_amount' => $lineBilling['tax_amount'],
                 ]);
             }
 
@@ -668,25 +686,30 @@ class PurchaseOrderManagement extends Component
 
     public function calculateBilling(): array
     {
-        $subtotal = collect($this->items)->sum(fn($item) => (float) ($item['quantity'] ?? 0) * (float) ($item['unit_cost'] ?? 0));
+        $subtotal = collect($this->items)->sum(fn($item) => $this->lineGrossAmount($item));
         $discountValue = in_array($this->discount_type, ['senior', 'pwd'], true) ? 20 : (float) $this->discount_value;
-        $discountAmount = $subtotal * ($discountValue / 100);
-        $taxRate = $this->taxRateForType($this->tax_type);
-        $taxableAmount = max(0, $subtotal - $discountAmount);
-        $displaySubtotal = in_array($this->tax_type, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)
-            ? $taxableAmount / 1.12
-            : $taxableAmount;
-        $taxAmount = $this->calculateTaxAmount($taxableAmount);
+        $lineBillings = collect($this->items)->map(fn($item) => $this->calculateLineBilling($item, $discountValue));
+        $discountAmount = $lineBillings->sum('discount_amount');
+        $displaySubtotal = $lineBillings->sum('net_amount');
+        $taxAmount = $lineBillings->sum('tax_amount');
+        $total = $lineBillings->sum('total_amount');
+        $taxTypes = $lineBillings
+            ->pluck('tax_type')
+            ->unique()
+            ->values();
+        $taxType = $taxTypes->count() === 1 ? $taxTypes->first() : 'mixed';
+        $taxRate = $taxTypes->count() === 1 ? $this->taxRateForType($taxType) : 0;
 
         return [
             'subtotal' => $displaySubtotal,
             'gross_subtotal' => $subtotal,
-            'taxable_gross_amount' => $taxableAmount,
+            'taxable_gross_amount' => max(0, $subtotal - $discountAmount),
             'discount_value' => $discountValue,
             'discount_amount' => $discountAmount,
+            'tax_type' => $taxType,
             'tax_rate' => $taxRate,
             'tax_amount' => $taxAmount,
-            'total' => $this->calculateTotalAmount($taxableAmount, $taxAmount),
+            'total' => $total,
         ];
     }
 
@@ -717,6 +740,46 @@ class PurchaseOrderManagement extends Component
         };
     }
 
+    private function lineGrossAmount(array $item): float
+    {
+        return (float) ($item['quantity'] ?? 0) * (float) ($item['unit_cost'] ?? 0);
+    }
+
+    public function calculateLineBilling(array $item, ?float $discountValue = null): array
+    {
+        $grossAmount = $this->lineGrossAmount($item);
+        $discountValue ??= in_array($this->discount_type, ['senior', 'pwd'], true) ? 20 : (float) $this->discount_value;
+        $discountAmount = $grossAmount * ($discountValue / 100);
+        $discountedAmount = max(0, $grossAmount - $discountAmount);
+        $taxType = $item['tax_type'] ?? 'vat_12';
+        $taxRate = $this->taxRateForType($taxType);
+
+        if ($taxType === 'vat_12') {
+            $taxAmount = $discountedAmount - ($discountedAmount / 1.12);
+            $netAmount = $discountedAmount / 1.12;
+            $totalAmount = $discountedAmount;
+        } elseif (in_array($taxType, ['ewt_sales_1', 'ewt_service_2'], true)) {
+            $netAmount = $discountedAmount / 1.12;
+            $taxAmount = $netAmount * ($taxRate / 100);
+            $totalAmount = max(0, $discountedAmount - $taxAmount);
+        } else {
+            $taxAmount = $discountedAmount * ($taxRate / 100);
+            $netAmount = $discountedAmount;
+            $totalAmount = $discountedAmount + $taxAmount;
+        }
+
+        return [
+            'gross_amount' => $grossAmount,
+            'discount_amount' => $discountAmount,
+            'discounted_amount' => $discountedAmount,
+            'net_amount' => $netAmount,
+            'tax_type' => $taxType,
+            'tax_rate' => $taxRate,
+            'tax_amount' => $taxAmount,
+            'total_amount' => $totalAmount,
+        ];
+    }
+
     public function calculateTaxAmount(float $amount): float
     {
         if ($this->tax_type === 'vat_12') {
@@ -745,15 +808,26 @@ class PurchaseOrderManagement extends Component
             'vat_12' => 'VAT (12% inclusive)',
             'ewt_sales_1' => 'EWT (1% on sales, net of VAT)',
             'ewt_service_2' => 'EWT (2% on services, net of VAT)',
-            default => 'No Tax',
+            'mixed' => 'Mixed Tax',
+            default => 'Non-VAT',
         };
     }
 
     public function subtotalLabel(): string
     {
-        return in_array($this->tax_type, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)
+        return collect($this->items)->contains(fn($item) => in_array($item['tax_type'] ?? 'vat_12', ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true))
             ? 'Subtotal (Net of VAT):'
             : 'Subtotal:';
+    }
+
+    public function taxOptions(): array
+    {
+        return [
+            ['value' => 'vat_12', 'label' => 'VAT (12% inclusive)'],
+            ['value' => 'none', 'label' => 'Non-VAT'],
+            ['value' => 'ewt_sales_1', 'label' => 'EWT (1% on sales, net of VAT)'],
+            ['value' => 'ewt_service_2', 'label' => 'EWT (2% on services, net of VAT)'],
+        ];
     }
 
     /**

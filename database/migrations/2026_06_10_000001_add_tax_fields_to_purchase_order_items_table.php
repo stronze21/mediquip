@@ -1,0 +1,36 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::table('purchase_order_items', function (Blueprint $table) {
+            if (!Schema::hasColumn('purchase_order_items', 'tax_type')) {
+                $table->string('tax_type')->nullable()->after('total_cost');
+            }
+
+            if (!Schema::hasColumn('purchase_order_items', 'tax_rate')) {
+                $table->decimal('tax_rate', 5, 2)->default(0)->after('tax_type');
+            }
+
+            if (!Schema::hasColumn('purchase_order_items', 'tax_amount')) {
+                $table->decimal('tax_amount', 10, 2)->default(0)->after('tax_rate');
+            }
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('purchase_order_items', function (Blueprint $table) {
+            foreach (['tax_type', 'tax_rate', 'tax_amount'] as $column) {
+                if (Schema::hasColumn('purchase_order_items', $column)) {
+                    $table->dropColumn($column);
+                }
+            }
+        });
+    }
+};
