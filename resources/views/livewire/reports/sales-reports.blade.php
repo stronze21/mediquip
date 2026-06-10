@@ -67,6 +67,18 @@
                     icon="o-cube" color="text-warning" />
             </div>
 
+            <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
+                <x-mary-stat title="Outstanding Balance"
+                    value="₱{{ number_format($salesSummary['outstanding_balance'] ?? 0, 2) }}"
+                    icon="o-banknotes" color="text-error" />
+
+                <x-mary-stat title="Unpaid Invoices" value="{{ number_format($salesSummary['unpaid_count'] ?? 0) }}"
+                    icon="o-exclamation-circle" color="text-warning" />
+
+                <x-mary-stat title="Overdue Invoices" value="{{ number_format($salesSummary['overdue_count'] ?? 0) }}"
+                    icon="o-clock" color="text-error" />
+            </div>
+
             {{-- Profit Summary Cards --}}
             <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2 lg:grid-cols-4">
                 <x-mary-stat title="Total Profit" value="₱{{ number_format($profitSummary['total_profit'] ?? 0, 2) }}"
@@ -336,6 +348,57 @@
                 </x-mary-table>
             </div>
         </x-mary-tab>
+
+        <x-mary-tab name="unpaid" label="Unpaid" icon="o-exclamation-triangle">
+            <div class="overflow-x-auto">
+                <x-mary-table :headers="[
+                    ['key' => 'invoice_number', 'label' => 'Invoice #'],
+                    ['key' => 'customer', 'label' => 'Customer'],
+                    ['key' => 'due_date', 'label' => 'Due Date'],
+                    ['key' => 'payment_status', 'label' => 'Payment Status'],
+                    ['key' => 'days_delayed', 'label' => 'Delay'],
+                    ['key' => 'total_amount', 'label' => 'Total'],
+                    ['key' => 'paid_amount', 'label' => 'Paid'],
+                    ['key' => 'outstanding_balance', 'label' => 'Balance'],
+                ]" :rows="$unpaidInvoices" class="table-zebra">
+                    @scope('cell_invoice_number', $invoice)
+                        <div>
+                            <div class="font-medium">{{ $invoice['invoice_number'] }}</div>
+                            <div class="text-xs text-gray-600">{{ $invoice['warehouse'] }} &middot; {{ $invoice['staff'] }}</div>
+                        </div>
+                    @endscope
+
+                    @scope('cell_due_date', $invoice)
+                        <span class="text-sm">
+                            {{ $invoice['due_date'] ? \Carbon\Carbon::parse($invoice['due_date'])->format('M j, Y') : 'N/A' }}
+                        </span>
+                    @endscope
+
+                    @scope('cell_payment_status', $invoice)
+                        <x-mary-badge value="{{ $invoice['payment_status'] }}"
+                            class="badge-{{ $invoice['days_delayed'] > 0 ? 'error' : 'warning' }}" />
+                    @endscope
+
+                    @scope('cell_days_delayed', $invoice)
+                        <span class="{{ $invoice['days_delayed'] > 0 ? 'font-medium text-error' : 'text-gray-600' }}">
+                            {{ $invoice['days_delayed'] > 0 ? $invoice['days_delayed'] . ' days' : 'Not overdue' }}
+                        </span>
+                    @endscope
+
+                    @scope('cell_total_amount', $invoice)
+                        <span class="font-medium">₱{{ number_format($invoice['total_amount'], 2) }}</span>
+                    @endscope
+
+                    @scope('cell_paid_amount', $invoice)
+                        <span class="font-medium text-success">₱{{ number_format($invoice['paid_amount'], 2) }}</span>
+                    @endscope
+
+                    @scope('cell_outstanding_balance', $invoice)
+                        <span class="font-medium text-error">₱{{ number_format($invoice['outstanding_balance'], 2) }}</span>
+                    @endscope
+                </x-mary-table>
+            </div>
+        </x-mary-tab>
     </x-mary-tabs>
 
     {{-- Export Modal --}}
@@ -367,6 +430,7 @@
                             <li>Sales trends & hourly patterns</li>
                             <li>Staff performance & category breakdown</li>
                             <li>Payment methods & detailed data</li>
+                            <li>Unpaid invoices with delay days</li>
                         </ul>
                     </div>
                 </div>

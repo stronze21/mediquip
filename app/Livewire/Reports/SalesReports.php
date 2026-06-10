@@ -46,6 +46,7 @@ class SalesReports extends Component
     public $salesByUser = [];
     public $categoryPerformance = [];
     public $dailyComparison = [];
+    public $unpaidInvoices = [];
 
     // Chart Data
     public $salesChartData = [];
@@ -154,6 +155,7 @@ class SalesReports extends Component
         $this->loadSalesByUser();
         $this->loadCategoryPerformance();
         $this->loadDailyComparison();
+        $this->loadUnpaidInvoices();
         $this->prepareChartData();
     }
 
@@ -185,11 +187,42 @@ class SalesReports extends Component
             'bank_transfer_sales' => $sales->where('payment_method', 'bank_transfer')->sum('total_amount'),
             'terms_sales' => $sales->where('payment_method', 'terms')->sum('total_amount'),
             'outstanding_balance' => $sales->sum(fn($sale) => $sale->outstanding_balance),
+            'unpaid_count' => $sales->where('payment_method', 'terms')->where('payment_status', '!=', 'paid')->count(),
+            'overdue_count' => $sales->where('payment_method', 'terms')->where('payment_status', '!=', 'paid')->filter(fn($sale) => $sale->days_delayed > 0)->count(),
             'total_items_sold' => $sales->sum(function ($sale) {
                 return $sale->items->sum('quantity');
             }),
             'unique_customers' => $sales->pluck('customer_id')->filter()->unique()->count(),
         ];
+    }
+
+    private function loadUnpaidInvoices()
+    {
+        $this->unpaidInvoices = $this->getBaseQuery()
+            ->with(['customer', 'warehouse', 'user'])
+            ->where('payment_method', 'terms')
+            ->where('payment_status', '!=', 'paid')
+            ->whereRaw('total_amount > paid_amount')
+            ->orderByRaw('due_date IS NULL')
+            ->orderBy('due_date')
+            ->get()
+            ->map(function ($sale) {
+                return [
+                    'invoice_number' => $sale->invoice_number,
+                    'date' => $sale->created_at,
+                    'customer' => $sale->customer?->name ?? 'Walk-in Customer',
+                    'warehouse' => $sale->warehouse?->name ?? 'N/A',
+                    'staff' => $sale->user?->name ?? 'N/A',
+                    'terms' => $sale->payment_terms ?? 'N/A',
+                    'due_date' => $sale->due_date,
+                    'payment_status' => $sale->payment_status_label,
+                    'days_delayed' => $sale->days_delayed,
+                    'total_amount' => $sale->total_amount,
+                    'paid_amount' => $sale->paid_amount,
+                    'outstanding_balance' => $sale->outstanding_balance,
+                ];
+            })
+            ->toArray();
     }
 
     private function loadProfitSummary()
@@ -484,6 +517,7 @@ class SalesReports extends Component
                 'salesByUser' => $this->salesByUser,
                 'categoryPerformance' => $this->categoryPerformance,
                 'dailyComparison' => $this->dailyComparison,
+                'unpaidInvoices' => $this->unpaidInvoices,
             ];
 
             $filters = [
@@ -548,6 +582,7 @@ class SalesReports extends Component
             ['id' => 'customers', 'name' => 'Customer Analysis'],
             ['id' => 'trends', 'name' => 'Sales Trends'],
             ['id' => 'users', 'name' => 'Staff Performance'],
+            ['id' => 'unpaid', 'name' => 'Unpaid Invoices'],
         ];
 
         return view('livewire.reports.sales-reports', [

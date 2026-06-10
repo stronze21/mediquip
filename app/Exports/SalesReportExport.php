@@ -36,6 +36,7 @@ class SalesReportExport implements WithMultipleSheets
             new TopCustomersSheet($this->startDate, $this->endDate),
             new SalesTrendsSheet($this->startDate, $this->endDate),
             new DetailedSalesSheet($this->startDate, $this->endDate),
+            new UnpaidSalesSheet($this->startDate, $this->endDate),
         ];
     }
 }
@@ -447,6 +448,90 @@ class DetailedSalesSheet implements FromCollection, WithTitle, WithHeadings, Wit
             'I' => NumberFormat::FORMAT_CURRENCY_USD,
             'J' => NumberFormat::FORMAT_CURRENCY_USD,
             'K' => NumberFormat::FORMAT_CURRENCY_USD,
+        ];
+    }
+}
+
+class UnpaidSalesSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithColumnFormatting
+{
+    private $startDate;
+    private $endDate;
+
+    public function __construct($startDate, $endDate)
+    {
+        $this->startDate = $startDate;
+        $this->endDate = $endDate;
+    }
+
+    public function collection()
+    {
+        return Sale::with(['customer', 'user', 'warehouse'])
+            ->whereBetween('created_at', [
+                Carbon::parse($this->startDate)->startOfDay(),
+                Carbon::parse($this->endDate)->endOfDay()
+            ])
+            ->where('status', 'completed')
+            ->where('payment_method', 'terms')
+            ->where('payment_status', '!=', 'paid')
+            ->whereRaw('total_amount > paid_amount')
+            ->orderByRaw('due_date IS NULL')
+            ->orderBy('due_date')
+            ->get()
+            ->map(function ($sale) {
+                return [
+                    'invoice_number' => $sale->invoice_number,
+                    'date' => $sale->created_at->format('M j, Y g:i A'),
+                    'customer' => $sale->customer?->name ?? 'Walk-in Customer',
+                    'staff' => $sale->user?->name ?? 'Unknown',
+                    'warehouse' => $sale->warehouse?->name ?? 'Unknown',
+                    'terms' => $sale->payment_terms ?? 'N/A',
+                    'due_date' => $sale->due_date?->format('M j, Y') ?? 'N/A',
+                    'payment_status' => $sale->payment_status_label,
+                    'days_delayed' => $sale->days_delayed,
+                    'total' => $sale->total_amount,
+                    'paid' => $sale->paid_amount,
+                    'balance' => $sale->outstanding_balance,
+                ];
+            });
+    }
+
+    public function title(): string
+    {
+        return 'Unpaid Invoices';
+    }
+
+    public function headings(): array
+    {
+        return [
+            'Invoice #',
+            'Date & Time',
+            'Customer',
+            'Staff',
+            'Warehouse',
+            'Terms',
+            'Due Date',
+            'Payment Status',
+            'Days Delayed',
+            'Total',
+            'Paid',
+            'Balance',
+        ];
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true], 'fill' => ['fillType' => Fill::FILL_SOLID, 'color' => ['rgb' => 'E5E7EB']]],
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'I' => NumberFormat::FORMAT_NUMBER,
+            'J' => NumberFormat::FORMAT_CURRENCY_USD,
+            'K' => NumberFormat::FORMAT_CURRENCY_USD,
+            'L' => NumberFormat::FORMAT_CURRENCY_USD,
         ];
     }
 }

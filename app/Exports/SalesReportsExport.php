@@ -38,6 +38,7 @@ class SalesReportsExport implements WithMultipleSheets
             new StaffPerformanceSheet($this->reportData['salesByUser'] ?? []),
             new CategoryPerformanceReportSheet($this->reportData['categoryPerformance'] ?? []),
             new PaymentMethodsReportSheet($this->reportData['paymentMethods'] ?? []),
+            new UnpaidInvoicesReportSheet($this->reportData['unpaidInvoices'] ?? []),
             new HourlyTrendsReportSheet($this->reportData['hourlyTrends'] ?? []),
         ];
     }
@@ -630,6 +631,95 @@ class HourlyTrendsReportSheet implements FromCollection, WithTitle, WithHeadings
             'A' => 15,
             'B' => 15,
             'C' => 18,
+        ];
+    }
+}
+
+class UnpaidInvoicesReportSheet implements FromCollection, WithTitle, WithHeadings, WithStyles, WithColumnFormatting, WithMapping, WithColumnWidths
+{
+    private $unpaidInvoices;
+
+    public function __construct($unpaidInvoices)
+    {
+        $this->unpaidInvoices = $unpaidInvoices;
+    }
+
+    public function collection()
+    {
+        return collect($this->unpaidInvoices);
+    }
+
+    public function map($invoice): array
+    {
+        return [
+            $invoice['invoice_number'],
+            $invoice['customer'],
+            $invoice['warehouse'],
+            $invoice['staff'],
+            $invoice['terms'],
+            $invoice['due_date'] ? Carbon::parse($invoice['due_date'])->format('M j, Y') : 'N/A',
+            $invoice['payment_status'],
+            $invoice['days_delayed'],
+            $invoice['total_amount'],
+            $invoice['paid_amount'],
+            $invoice['outstanding_balance'],
+        ];
+    }
+
+    public function headings(): array
+    {
+        return [
+            'Invoice #',
+            'Customer',
+            'Warehouse',
+            'Staff',
+            'Terms',
+            'Due Date',
+            'Payment Status',
+            'Days Delayed',
+            'Total Amount',
+            'Paid Amount',
+            'Outstanding Balance',
+        ];
+    }
+
+    public function title(): string
+    {
+        return 'Unpaid Invoices';
+    }
+
+    public function styles(Worksheet $sheet)
+    {
+        return [
+            1 => ['font' => ['bold' => true]],
+            'A:K' => ['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]],
+        ];
+    }
+
+    public function columnFormats(): array
+    {
+        return [
+            'H' => NumberFormat::FORMAT_NUMBER,
+            'I' => '"â‚±"#,##0.00',
+            'J' => '"â‚±"#,##0.00',
+            'K' => '"â‚±"#,##0.00',
+        ];
+    }
+
+    public function columnWidths(): array
+    {
+        return [
+            'A' => 18,
+            'B' => 25,
+            'C' => 20,
+            'D' => 20,
+            'E' => 15,
+            'F' => 15,
+            'G' => 28,
+            'H' => 14,
+            'I' => 15,
+            'J' => 15,
+            'K' => 20,
         ];
     }
 }

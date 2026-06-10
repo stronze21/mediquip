@@ -11,7 +11,6 @@ use App\Models\SaleItem;
 use App\Models\Inventory;
 use App\Models\Warehouse;
 use App\Models\SaleReturn;
-use App\Models\SalesShift;
 use Illuminate\Support\Str;
 use Livewire\WithPagination;
 use App\Models\StockMovement;
@@ -428,20 +427,10 @@ class ReturnsManagement extends Component
             return;
         }
 
-        // Check if there's an active shift for returns processing
-        $activeShift = \App\Models\SalesShift::where('user_id', auth()->id())
-            ->where('status', 'active')
-            ->first();
-
-        if (!$activeShift) {
-            $this->error('No active sales shift found. Please start a shift before processing returns.');
-            return;
-        }
-
         try {
             // Generate return number
             $returnNumber = 'RET-' . now()->format('Ymd') . '-' . str_pad(SaleReturn::whereDate('created_at', now())->count() + 1, 4, '0', STR_PAD_LEFT);
-            \DB::transaction(function () use ($selectedItems, $activeShift, $returnNumber) {
+            \DB::transaction(function () use ($selectedItems, $returnNumber) {
                 // Create return record
                 $return = SaleReturn::create([
                     'return_number' => $returnNumber,
@@ -449,7 +438,6 @@ class ReturnsManagement extends Component
                     'customer_id' => $this->selectedSale->customer_id,
                     'warehouse_id' => $this->selectedSale->warehouse_id,
                     'user_id' => auth()->id(),
-                    'sales_shift_id' => $activeShift->id, // Link to active shift
                     'type' => $this->returnType,
                     'reason' => $this->returnReason,
                     'notes' => $this->returnNotes,
@@ -472,30 +460,13 @@ class ReturnsManagement extends Component
                     ]);
                 }
 
-                // Update shift totals
-                $this->updateShiftTotals($activeShift, $return);
             });
-            $this->success("Return {$returnNumber} created successfully and linked to current shift!");
+            $this->success("Return {$returnNumber} created successfully!");
             $this->showReturnModal = false;
             $this->resetReturnForm();
         } catch (\Exception $e) {
             $this->error('Error creating return: ' . $e->getMessage());
         }
-    }
-
-    private function updateShiftTotals($shift, $return)
-    {
-        // Update shift return totals
-        $shift->increment('total_returns_count', 1);
-        $shift->increment('total_returns_amount', $return->refund_amount);
-
-        // If this is a cash refund, reduce cash total
-        if ($return->type === 'refund' && $return->sale->payment_method === 'cash') {
-            $shift->decrement('cash_sales', $return->refund_amount);
-        }
-
-        // Update overall shift totals
-        $shift->decrement('total_sales', $return->refund_amount);
     }
 
     public function processApprovedReturn(SaleReturn $return)
@@ -531,12 +502,6 @@ class ReturnsManagement extends Component
                     $this->createStockMovement($returnItem, $return);
                 }
 
-                // Update shift processing status
-                if ($return->salesShift) {
-                    $return->salesShift->increment('processed_returns_count', 1);
-                    $return->salesShift->increment('processed_returns_amount', $return->refund_amount);
-                }
-
                 // Handle refund/store credit
                 if ($return->type === 'refund') {
                     $this->processRefund($return);
@@ -545,27 +510,9 @@ class ReturnsManagement extends Component
                 }
             });
 
-            $this->success('Return processed successfully! Sale items and shift totals updated.');
+            $this->success('Return processed successfully! Sale items updated.');
         } catch (\Exception $e) {
             $this->error('Error processing return: ' . $e->getMessage());
-        }
-    }
-
-    private function updateShiftOnReturnProcessing($return)
-    {
-        if ($return->salesShift) {
-            // NOW update the financial totals
-            $return->salesShift->increment('total_returns_amount', $return->refund_amount);
-            $return->salesShift->increment('processed_returns_count', 1);
-            $return->salesShift->increment('processed_returns_amount', $return->refund_amount);
-
-            // If this is a cash refund, reduce cash total
-            if ($return->type === 'refund' && $return->sale->payment_method === 'cash') {
-                $return->salesShift->decrement('cash_sales', $return->refund_amount);
-            }
-
-            // Update overall shift totals
-            $return->salesShift->decrement('total_sales', $return->refund_amount);
         }
     }
 

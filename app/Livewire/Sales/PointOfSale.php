@@ -8,7 +8,6 @@ use App\Models\Product;
 use App\Models\ProductService;
 use App\Models\Sale;
 use App\Models\SaleItem;
-use App\Models\SalesShift;
 use App\Models\SerialNumber;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
@@ -20,9 +19,6 @@ use Mary\Traits\Toast;
 class PointOfSale extends Component
 {
     use Toast;
-
-    // Current active shift
-    public ?SalesShift $currentShift = null;
 
     // Cart and sale data
     public $cartItems = [];
@@ -49,7 +45,6 @@ class PointOfSale extends Component
     public $showDiscountModal = false;
     public $showHoldSaleModal = false;
     public $showSearchCustomerModal = false;
-    public $showStartShiftModal = false;
     public $searchResults = [];
 
     // Customer form fields
@@ -74,10 +69,6 @@ class PointOfSale extends Component
     public $showBarcodeModal = false;
     public $barcodeInput = '';
     public $scannedItems = [];
-
-    // Shift start fields
-    public $openingCash = '';
-    public $openingNotes = '';
 
     // Tax fields
     public $taxType = 'vat_12';
@@ -112,21 +103,9 @@ class PointOfSale extends Component
 
     public function mount()
     {
-        $this->loadCurrentShift();
-
-        // Set default warehouse from current shift or first available
-        if ($this->currentShift) {
-            $this->selectedWarehouse = $this->currentShift->warehouse_id;
-        } else {
-            $this->selectedWarehouse = Warehouse::where('is_active', true)->first()?->id;
-        }
+        $this->selectedWarehouse = Warehouse::where('is_active', true)->first()?->id;
 
         $this->loadHeldSales();
-    }
-
-    public function loadCurrentShift()
-    {
-        $this->currentShift = SalesShift::getActiveShift(auth()->id());
     }
 
     public function render()
@@ -143,6 +122,10 @@ class PointOfSale extends Component
     public function updatedInvoiceType($type)
     {
         $this->invoiceType = in_array($type, ['sales', 'service'], true) ? $type : 'sales';
+        $this->searchProduct = '';
+        $this->searchResults = [];
+        $this->searchService = '';
+        $this->serviceResults = [];
         $this->taxType = $this->invoiceType === 'service' ? 'ewt_service_2' : 'vat_12';
         $this->updatedTaxType($this->taxType);
         $this->updateCartTotals();
@@ -225,8 +208,6 @@ class PointOfSale extends Component
 
     public function addToCart($productId)
     {
-        if (!$this->checkActiveShift()) return;
-
         $product = Product::with(['inventory' => function ($query) {
             $query->where('warehouse_id', $this->selectedWarehouse);
         }])->find($productId);
@@ -282,8 +263,6 @@ class PointOfSale extends Component
 
     public function addServiceToCart($serviceId)
     {
-        if (!$this->checkActiveShift()) return;
-
         $service = ProductService::find($serviceId);
 
         if (!$service || $service->status !== 'active') {
@@ -509,64 +488,9 @@ class PointOfSale extends Component
         $this->success('Walk-in customer selected');
     }
 
-    // ===== SHIFT MANAGEMENT METHODS =====
-    public function openStartShiftModal()
-    {
-        if ($this->currentShift) {
-            $this->error('You already have an active shift.');
-            return;
-        }
-
-        $this->openingCash = '';
-        $this->openingNotes = '';
-        $this->showStartShiftModal = true;
-    }
-
-    public function startShift()
-    {
-        $this->validate([
-            'selectedWarehouse' => 'required|exists:warehouses,id',
-            'openingCash' => 'required|numeric|min:0',
-            'openingNotes' => 'nullable|string|max:500',
-        ]);
-
-        // Check for existing active shift
-        if (SalesShift::hasActiveShift(auth()->id())) {
-            $this->error('You already have an active shift.');
-            return;
-        }
-
-        try {
-            $this->currentShift = SalesShift::create([
-                'user_id' => auth()->id(),
-                'warehouse_id' => $this->selectedWarehouse,
-                'started_at' => now(),
-                'opening_cash' => $this->openingCash,
-                'opening_notes' => $this->openingNotes,
-                'status' => 'active',
-            ]);
-
-            $this->success('Shift started successfully! You can now process sales.');
-            $this->showStartShiftModal = false;
-        } catch (\Exception $e) {
-            $this->error('Error starting shift: ' . $e->getMessage());
-        }
-    }
-
-    private function checkActiveShift()
-    {
-        if (!$this->currentShift) {
-            $this->error('No active shift found. Please start a shift before processing sales.');
-            return false;
-        }
-        return true;
-    }
-
     // ===== EXISTING POS METHODS (UPDATED) =====
     public function updatedSearchProduct()
     {
-        if (!$this->checkActiveShift()) return;
-
         if (strlen($this->searchProduct) >= 2) {
             $this->searchResults = Product::where('status', 'active')
                 ->where(function ($query) {
@@ -680,8 +604,6 @@ class PointOfSale extends Component
      */
     public function addToCartWithPriceSelection($productId)
     {
-        if (!$this->checkActiveShift()) return;
-
         $product = Product::find($productId);
         if (!$product) {
             $this->error('Product not found.');
@@ -888,8 +810,6 @@ class PointOfSale extends Component
     #[On('open-payment-modal')]
     public function openPaymentModal()
     {
-        if (!$this->checkActiveShift()) return;
-
         if (empty($this->cartItems)) {
             $this->error('Cart is empty. Add items first.');
             return;
@@ -931,8 +851,6 @@ class PointOfSale extends Component
     }
     public function completeSale()
     {
-        if (!$this->checkActiveShift()) return;
-
         $this->paidAmount = (float) ($this->paidAmount ?: 0);
         $usesPaymentTerms = $this->paymentMethod === 'terms';
 
@@ -1011,7 +929,6 @@ class PointOfSale extends Component
                 'tax_rate' => $this->taxRate,
                 'warehouse_id' => $this->selectedWarehouse,
                 'user_id' => auth()->id(),
-                'shift_id' => $this->currentShift->id,
                 'subtotal' => $this->subtotal,
                 'discount_amount' => $this->discountAmount,
                 'tax_amount' => $this->taxAmount,
@@ -1045,8 +962,6 @@ class PointOfSale extends Component
                 $customer->increment('total_purchases', $this->totalAmount);
                 $customer->update(['last_purchase_at' => now()]);
             }
-
-            $this->currentShift->calculateTotals();
 
             DB::commit();
 
@@ -1280,8 +1195,6 @@ class PointOfSale extends Component
 
     public function scanBarcode($barcode)
     {
-        if (!$this->checkActiveShift()) return;
-
         $product = Product::where('barcode', $barcode)
             ->where('status', 'active')
             ->first();
@@ -1298,11 +1211,6 @@ class PointOfSale extends Component
      */
     public function setQuickCash($amount)
     {
-        if (!$this->currentShift) {
-            $this->addError('shift', 'No active shift found.');
-            return;
-        }
-
         if (count($this->cartItems) === 0) {
             $this->addError('cart', 'Cart is empty.');
             return;
@@ -1325,11 +1233,6 @@ class PointOfSale extends Component
      */
     public function setExactCash()
     {
-        if (!$this->currentShift) {
-            $this->addError('shift', 'No active shift found.');
-            return;
-        }
-
         if (count($this->cartItems) === 0) {
             $this->addError('cart', 'Cart is empty.');
             return;
@@ -1346,8 +1249,6 @@ class PointOfSale extends Component
     #[On('open-barcode-modal')]
     public function openBarcodeModal()
     {
-        if (!$this->checkActiveShift()) return;
-
         $this->barcodeInput = '';
         $this->scannedItems = [];
         $this->showBarcodeModal = true;
@@ -1601,8 +1502,6 @@ class PointOfSale extends Component
     #[On('open-hold-sale-modal')]
     public function openHoldSaleModal()
     {
-        if (!$this->checkActiveShift()) return;
-
         if (empty($this->cartItems)) {
             $this->error('Cart is empty. Add items first.');
             return;
@@ -1614,8 +1513,6 @@ class PointOfSale extends Component
 
     public function holdSale()
     {
-        if (!$this->checkActiveShift()) return;
-
         $this->validate([
             'holdReference' => 'required|string|max:255',
         ]);
@@ -1631,7 +1528,6 @@ class PointOfSale extends Component
                 'tax_rate' => $this->taxRate,
                 'warehouse_id' => $this->selectedWarehouse,
                 'user_id' => auth()->id(),
-                'shift_id' => $this->currentShift->id, // Associate with current shift
                 'subtotal' => $this->subtotal,
                 'discount_amount' => $this->discountAmount,
                 'tax_amount' => $this->taxAmount,
@@ -1700,8 +1596,6 @@ class PointOfSale extends Component
 
     public function retrieveHeldSale($saleId)
     {
-        if (!$this->checkActiveShift()) return;
-
         try {
             $heldSale = Sale::with(['customer', 'items.product', 'items.service'])->find($saleId);
 
@@ -1792,8 +1686,6 @@ class PointOfSale extends Component
 
     public function updatedSearchService()
     {
-        if (!$this->checkActiveShift()) return;
-
         if (strlen($this->searchService) >= 2) {
             $this->serviceResults = ProductService::active()
                 ->where(function ($query) {
@@ -1810,8 +1702,6 @@ class PointOfSale extends Component
 
     public function openServiceModal()
     {
-        if (!$this->checkActiveShift()) return;
-
         $this->showServiceModal = true;
         $this->searchService = '';
         $this->serviceResults = [];
@@ -1826,7 +1716,7 @@ class PointOfSale extends Component
 
     public function updateCartItemQuantity($cartKey, $newQuantity)
     {
-        if (!isset($this->cartItems[$cartKey]) || !$this->checkActiveShift()) {
+        if (!isset($this->cartItems[$cartKey])) {
             return;
         }
 
@@ -1847,7 +1737,7 @@ class PointOfSale extends Component
 
     public function updatePrice($cartKey, $newPrice)
     {
-        if (!isset($this->cartItems[$cartKey]) || !$this->checkActiveShift()) {
+        if (!isset($this->cartItems[$cartKey])) {
             return;
         }
 
@@ -1866,7 +1756,7 @@ class PointOfSale extends Component
 
     public function openPriceSelection($cartKey)
     {
-        if (!isset($this->cartItems[$cartKey]) || !$this->checkActiveShift()) {
+        if (!isset($this->cartItems[$cartKey])) {
             return;
         }
 
@@ -1887,10 +1777,6 @@ class PointOfSale extends Component
     #[On('clear-cart')]
     public function clearCart()
     {
-        if (!$this->checkActiveShift()) {
-            return;
-        }
-
         $this->cartItems = [];
         $this->updateCartTotals();
         $this->success('Cart cleared.');
@@ -1898,7 +1784,7 @@ class PointOfSale extends Component
 
     public function openSerialModal($cartKey)
     {
-        if (!isset($this->cartItems[$cartKey]) || !$this->checkActiveShift()) {
+        if (!isset($this->cartItems[$cartKey])) {
             return;
         }
 

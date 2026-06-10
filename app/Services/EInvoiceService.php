@@ -24,6 +24,8 @@ class EInvoiceService
                 'payment_terms' => $sale->payment_terms,
                 'due_date' => optional($sale->due_date)->toDateString(),
                 'payment_status' => $sale->payment_status,
+                'payment_status_label' => $sale->payment_status_label,
+                'days_delayed' => $sale->days_delayed,
             ],
             'seller' => [
                 'name' => config('app.name'),

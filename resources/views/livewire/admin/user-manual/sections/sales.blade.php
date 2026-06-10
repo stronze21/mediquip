@@ -434,46 +434,6 @@
             product settings.
         </div>
     </div>
-
-    <h3 class="mb-4 text-xl font-semibold text-base-content">Shift Management</h3>
-    <p class="mb-4 text-base-content/80">
-        Navigate to <strong>Sales > Shift Management</strong> to manage cashier shifts and daily sales tracking.
-    </p>
-
-    <div class="mb-6 overflow-x-auto">
-        <table class="table w-full table-zebra">
-            <thead>
-                <tr>
-                    <th>Feature</th>
-                    <th>Purpose</th>
-                    <th>Who Can Access</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Open Shift</td>
-                    <td>Start daily sales tracking</td>
-                    <td>Cashier, Manager, Admin</td>
-                </tr>
-                <tr>
-                    <td>Close Shift</td>
-                    <td>End shift with cash count</td>
-                    <td>Cashier, Manager, Admin</td>
-                </tr>
-                <tr>
-                    <td>Shift Reports</td>
-                    <td>Sales summary for shift</td>
-                    <td>Manager, Admin</td>
-                </tr>
-                <tr>
-                    <td>Cash Drawer</td>
-                    <td>Track opening/closing cash</td>
-                    <td>All sales users</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-
     <h3 class="mb-4 text-xl font-semibold text-base-content">Receipt Management</h3>
     <div class="mb-6 alert alert-warning">
         <x-mary-icon name="o-exclamation-triangle" class="w-6 h-6" />
@@ -521,7 +481,6 @@
                     <li>â€¢ Issue BIR receipts manually</li>
                     <li>â€¢ Record customer information when possible</li>
                     <li>â€¢ Process returns promptly</li>
-                    <li>â€¢ Open and close shifts properly</li>
                 </ul>
             </div>
         </div>
@@ -532,7 +491,6 @@
                     <li>â€¢ Using system receipts as official receipts</li>
                     <li>â€¢ Processing sales without inventory</li>
                     <li>â€¢ Ignoring return policies</li>
-                    <li>â€¢ Leaving shifts open overnight</li>
                     <li>â€¢ Manual price overrides without reason</li>
                     <li>â€¢ Processing returns without verification</li>
                 </ul>

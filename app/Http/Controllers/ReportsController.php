@@ -18,7 +18,7 @@ class ReportsController extends Controller
     public function exportSalesPdf(Request $request)
     {
         // Check permissions
-        if (!auth()->user()->can('view_reports')) {
+        if (!auth()->user()->canViewReports()) {
             abort(403, 'Unauthorized to export reports.');
         }
 
@@ -45,7 +45,7 @@ class ReportsController extends Controller
     public function exportSalesExcel(Request $request)
     {
         // Check permissions
-        if (!auth()->user()->can('view_reports')) {
+        if (!auth()->user()->canViewReports()) {
             abort(403, 'Unauthorized to export reports.');
         }
 

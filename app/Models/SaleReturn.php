@@ -15,7 +15,6 @@ class SaleReturn extends Model
         'customer_id',
         'warehouse_id',
         'user_id',
-        'sales_shift_id',
         'type',
         'reason',
         'notes',
@@ -41,11 +40,6 @@ class SaleReturn extends Model
     ];
 
     // Relationships
-    public function salesShift()
-    {
-        return $this->belongsTo(SalesShift::class, 'sales_shift_id');
-    }
-
     public function sale()
     {
         return $this->belongsTo(Sale::class);

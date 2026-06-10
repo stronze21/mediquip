@@ -173,6 +173,8 @@
                         $isAdmin ||
                         $user->role === 'warehouse_staff' ||
                         (method_exists($user, 'isWarehouseStaff') && $user->isWarehouseStaff());
+
+                    $canViewReports = method_exists($user, 'canViewReports') && $user->canViewReports();
                 @endphp
 
                 {{-- Inventory Management - Admin, Manager, or Warehouse Staff --}}
@@ -205,12 +207,12 @@
                             link="{{ route('sales.pos') }}" />
                         <x-mary-menu-item title="Sales History" icon="o-document-text"
                             link="{{ route('sales.history') }}" />
+                        <x-mary-menu-item title="Payments" icon="o-banknotes"
+                            link="{{ route('sales.payments') }}" />
                         <x-mary-menu-item title="Returns & Exchanges" icon="o-arrow-uturn-left"
                             link="{{ route('sales.returns') }}" />
                         <x-mary-menu-item title="Warranty Tracking" icon="o-shield-check"
                             link="{{ route('admin.warranty-tracking') }}" />
-                        <x-mary-menu-item title="Shift Management" icon="o-clock"
-                            link="{{ route('sales.shifts') }}" />
                         <x-mary-menu-item title="Customers" icon="o-users" link="{{ route('sales.customers') }}" />
                     </x-mary-menu-sub>
                 @endif
@@ -227,17 +229,19 @@
 
                 <x-mary-menu-separator />
 
-                {{-- Reports - Admin or Manager --}}
-                @if ($isAdmin || $isManager)
+                {{-- Reports - Admin, Manager, or Sales --}}
+                @if ($canViewReports)
                     <x-mary-menu-sub title="Reports" icon="o-chart-pie">
                         <x-mary-menu-item title="Sales Reports" icon="o-chart-bar"
                             link="{{ route('reports.sales') }}" />
-                        <x-mary-menu-item title="Inventory Reports" icon="o-cube"
-                            link="{{ route('reports.inventory') }}" />
-                        <x-mary-menu-item title="Financial Reports" icon="o-banknotes"
-                            link="{{ route('reports.financial') }}" />
-                        <x-mary-menu-item title="Customer Reports" icon="o-users"
-                            link="{{ route('reports.customers') }}" />
+                        @if ($isAdmin || $isManager || $user->hasPermission('view_reports'))
+                            <x-mary-menu-item title="Inventory Reports" icon="o-cube"
+                                link="{{ route('reports.inventory') }}" />
+                            <x-mary-menu-item title="Financial Reports" icon="o-banknotes"
+                                link="{{ route('reports.financial') }}" />
+                            <x-mary-menu-item title="Customer Reports" icon="o-users"
+                                link="{{ route('reports.customers') }}" />
+                        @endif
                     </x-mary-menu-sub>
                 @endif
 

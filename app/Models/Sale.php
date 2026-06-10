@@ -19,7 +19,6 @@ class Sale extends Model
         'tax_rate',
         'warehouse_id',
         'user_id',
-        'shift_id',
         'subtotal',
         'discount_amount',
         'tax_amount',
@@ -67,12 +66,6 @@ class Sale extends Model
         return $this->belongsTo(User::class);
     }
 
-    // Added shift relationship
-    public function shift()
-    {
-        return $this->belongsTo(SalesShift::class, 'shift_id');
-    }
-
     public function items()
     {
         return $this->hasMany(SaleItem::class);
@@ -114,6 +107,35 @@ class Sale extends Model
     public function getOutstandingBalanceAttribute(): float
     {
         return max(0, (float) $this->total_amount - (float) $this->paid_amount);
+    }
+
+    public function getIsPaidAttribute(): bool
+    {
+        return ($this->payment_status ?? 'paid') === 'paid' || $this->outstanding_balance <= 0;
+    }
+
+    public function getDaysDelayedAttribute(): int
+    {
+        if ($this->is_paid || !$this->due_date) {
+            return 0;
+        }
+
+        return (int) max(0, $this->due_date->copy()->startOfDay()->diffInDays(now()->startOfDay(), false));
+    }
+
+    public function getPaymentStatusLabelAttribute(): string
+    {
+        if ($this->is_paid) {
+            return 'Paid';
+        }
+
+        $status = ucfirst($this->payment_status ?? 'unpaid');
+
+        if ($this->days_delayed > 0) {
+            return "{$status} ({$this->days_delayed} days delayed)";
+        }
+
+        return $status;
     }
 
     public function getPaymentMethodLabelAttribute(): string

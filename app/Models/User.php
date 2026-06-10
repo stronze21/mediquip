@@ -201,7 +201,7 @@ class User extends Authenticatable
 
     public function canViewReports()
     {
-        return in_array($this->role, ['admin', 'manager']) ||
+        return in_array($this->role, ['admin', 'manager', 'cashier']) ||
             $this->hasPermission('view_reports');
     }
 

@@ -1,119 +1,81 @@
 <div class="min-h-screen bg-base-200 hide-all-scrollbarss">
-    {{-- Header with Shift Status --}}
-    <div class="p-4 shadow-sm bg-base-100">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-4">
-                @if ($currentShift)
-                    <div class="flex items-center space-x-2">
-                        <x-mary-badge value="Shift: {{ $currentShift->shift_number }}" class="badge-success" />
-                        <span class="text-sm text-base-600">
-                            Started: {{ $currentShift->started_at->format('H:i') }}
-                        </span>
-                    </div>
-                @endif
-            </div>
-            <div class="flex items-center space-x-2">
-                @if ($currentShift)
-                    <div class="text-right">
-                        <div class="text-sm font-medium">{{ $currentShift->total_transactions }} transactions</div>
-                        <div class="text-sm text-base-600">&#8369;{{ number_format($currentShift->total_sales, 2) }} total
-                        </div>
-                    </div>
-                @endif
-            </div>
-        </div>
-    </div>
-
-    @if (!$currentShift)
-        {{-- No Active Shift Warning --}}
-        <div class="p-4">
-            <x-mary-alert title="No Active Shift"
-                description="You must start a shift before processing sales. Click 'Start Shift' to begin."
-                icon="o-exclamation-triangle" class="alert-warning">
-                <x-slot:actions>
-                    <x-mary-button label="Start Shift" wire:click="openStartShiftModal" class="btn-primary" />
-                </x-slot:actions>
-            </x-mary-alert>
-        </div>
-    @endif
-
     <div class="grid grid-cols-1 gap-4 p-4 lg:grid-cols-12">
         {{-- Left Panel - Product Search & Cart --}}
         <div class="space-y-4 lg:col-span-8">
-            <x-mary-card title="{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}"
-                class="{{ !$currentShift ? 'opacity-50' : '' }}">
+            <x-mary-card title="{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}">
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <x-mary-select label="Invoice Type" :options="[
                         ['value' => 'sales', 'label' => 'Sales Invoice'],
                         ['value' => 'service', 'label' => 'Service Invoice'],
-                    ]" wire:model.live="invoiceType" option-label="label" option-value="value"
-                        :disabled="!$currentShift" />
+                    ]" wire:model.live="invoiceType" option-label="label" option-value="value" />
 
                     <x-mary-select label="Tax Rate" :options="[
                         ['value' => 'vat_12', 'label' => 'VAT (12% inclusive)'],
                         ['value' => 'ewt_sales_1', 'label' => 'EWT (1% on sales, net of VAT)'],
                         ['value' => 'ewt_service_2', 'label' => 'EWT (2% on services, net of VAT)'],
                         ['value' => 'none', 'label' => 'No Tax'],
-                    ]" wire:model.live="taxType" option-label="label" option-value="value"
-                        :disabled="!$currentShift" />
+                    ]" wire:model.live="taxType" option-label="label" option-value="value" />
                 </div>
             </x-mary-card>
 
             {{-- Product Search --}}
-            <x-mary-card title="Invoice Items" class="{{ !$currentShift ? 'opacity-50' : '' }}">
-                <div class="space-y-4">
-                    {{-- Search Input --}}
-                    <div class="flex gap-2">
-                        <div class="flex-1">
-                            <x-mary-input placeholder="Search by name, SKU, or barcode..."
-                                wire:model.live.debounce="searchProduct" icon="o-magnifying-glass" :disabled="!$currentShift" />
+            <x-mary-card title="Invoice Items">
+                @if ($invoiceType === 'sales')
+                    <div class="space-y-4">
+                        {{-- Search Input --}}
+                        <div class="flex gap-2">
+                            <div class="flex-1">
+                                <x-mary-input placeholder="Search by name, SKU, or barcode..."
+                                    wire:model.live.debounce="searchProduct" icon="o-magnifying-glass" />
+                            </div>
+                            <x-mary-button icon="o-qr-code" wire:click="openBarcodeModal" class="btn-secondary"
+                                tooltip="Barcode Scanner" />
                         </div>
-                        <x-mary-button icon="o-qr-code" wire:click="openBarcodeModal" class="btn-secondary"
-                            tooltip="Barcode Scanner" :disabled="!$currentShift" />
-                    </div>
 
-                    {{-- Product Search Results --}}
-                    @if (count($searchResults) > 0)
-                        <div class="mt-4">
-                            <h5 class="mb-2 font-medium text-base-700">Search Results:</h5>
-                            <div class="overflow-y-auto border rounded-lg shadow-sm bg-base h-60">
-                                <div class="space-y-0">
-                                    @foreach ($searchResults as $product)
-                                        <div
-                                            class="flex items-center justify-between p-3 transition-colors border-b last:border-b-0 hover:bg-base-50">
-                                            <div class="flex-1 min-w-0">
-                                                <div class="font-medium truncate">{{ $product['name'] }}</div>
-                                                <div class="text-sm truncate text-base-500">{{ $product['sku'] }} |
-                                                    &#8369;{{ number_format($product['selling_price'], 2) }}</div>
-                                                @php
-                                                    $stock = $product['inventory'][0]['quantity_available'] ?? 0;
-                                                @endphp
-                                                <div
-                                                    class="text-sm {{ $stock <= 0 ? 'text-red-500 font-semibold' : 'text-base-500' }}">
-                                                    Stock: {{ $stock }}
-                                                    @if ($stock <= 0)
-                                                        <span class="ml-1 text-xs">(Out of Stock)</span>
-                                                    @endif
+                        {{-- Product Search Results --}}
+                        @if (count($searchResults) > 0)
+                            <div class="mt-4">
+                                <h5 class="mb-2 font-medium text-base-700">Search Results:</h5>
+                                <div class="overflow-y-auto border rounded-lg shadow-sm bg-base h-60">
+                                    <div class="space-y-0">
+                                        @foreach ($searchResults as $product)
+                                            <div
+                                                class="flex items-center justify-between p-3 transition-colors border-b last:border-b-0 hover:bg-base-50">
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="font-medium truncate">{{ $product['name'] }}</div>
+                                                    <div class="text-sm truncate text-base-500">{{ $product['sku'] }} |
+                                                        &#8369;{{ number_format($product['selling_price'], 2) }}</div>
+                                                    @php
+                                                        $stock = $product['inventory'][0]['quantity_available'] ?? 0;
+                                                    @endphp
+                                                    <div
+                                                        class="text-sm {{ $stock <= 0 ? 'text-red-500 font-semibold' : 'text-base-500' }}">
+                                                        Stock: {{ $stock }}
+                                                        @if ($stock <= 0)
+                                                            <span class="ml-1 text-xs">(Out of Stock)</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                                <div class="flex flex-shrink-0 gap-2">
+                                                    <x-mary-button icon="o-plus"
+                                                        wire:click="addToCart({{ $product['id'] }})"
+                                                        class="btn-xs btn-primary" :disabled="$stock <= 0"
+                                                        title="Add with default price" />
+                                                    <x-mary-button icon="o-currency-dollar"
+                                                        wire:click="addToCartWithPriceSelection({{ $product['id'] }})"
+                                                        class="btn-xs btn-secondary" :disabled="$stock <= 0"
+                                                        title="Add with price selection" />
                                                 </div>
                                             </div>
-                                            <div class="flex flex-shrink-0 gap-2">
-                                                <x-mary-button icon="o-plus"
-                                                    wire:click="addToCart({{ $product['id'] }})"
-                                                    class="btn-xs btn-primary" :disabled="!$currentShift || $stock <= 0"
-                                                    title="Add with default price" />
-                                                <x-mary-button icon="o-currency-dollar"
-                                                    wire:click="addToCartWithPriceSelection({{ $product['id'] }})"
-                                                    class="btn-xs btn-secondary" :disabled="!$currentShift || $stock <= 0"
-                                                    title="Add with price selection" />
-                                            </div>
-                                        </div>
-                                    @endforeach
+                                        @endforeach
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    @endif
-                </div>
-                <div class="mt-4">
+                        @endif
+                    </div>
+                @endif
+
+                @if ($invoiceType === 'service')
                     <div class="flex gap-2">
                         <div class="flex-1">
                             <x-mary-input wire:model.live.debounce.300ms="searchService"
@@ -151,16 +113,16 @@
                             @endforeach
                         </div>
                     @endif
-                </div>
+                @endif
             </x-mary-card>
             {{-- Shopping Cart --}}
-            <x-mary-card class="{{ !$currentShift ? 'opacity-50' : '' }}">
+            <x-mary-card>
                 {{-- Invoice Cart Header with Bulk Actions --}}
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-semibold">Invoice Cart ({{ count($cartItems) }} items)</h3>
                     @if (count($cartItems) > 0)
                         <x-mary-button icon="o-currency-dollar" wire:click="openBulkPriceSelection"
-                            class="btn-xs btn-outline" :disabled="!$currentShift" label="Bulk Price" />
+                            class="btn-xs btn-outline" label="Bulk Price" />
                     @endif
                 </div>{{-- Add this before the cart items section --}}
                 @if ($this->hasSerialTrackingItems() && !$selectedCustomer)
@@ -220,13 +182,13 @@
                                 <div class="flex items-center gap-2">
                                     <x-mary-button icon="o-minus"
                                         wire:click="decreaseQuantity('{{ $cartKey }}')" class="btn-xs btn-ghost"
-                                        :disabled="!$currentShift" />
+                                        />
                                     <x-mary-input wire:model.blur="cartItems.{{ $cartKey }}.quantity"
                                         wire:change="updateCartItemQuantity('{{ $cartKey }}', $event.target.value)"
-                                        class="w-16 text-center input-xs" :disabled="!$currentShift" />
+                                        class="w-16 text-center input-xs" />
                                     <x-mary-button icon="o-plus"
                                         wire:click="increaseQuantity('{{ $cartKey }}')" class="btn-xs btn-ghost"
-                                        :disabled="!$currentShift || ($item['item_type'] === 'product' && $item['quantity'] >= ($item['available_stock'] ?? 0))" />
+                                        :disabled="$item['item_type'] === 'product' && $item['quantity'] >= ($item['available_stock'] ?? 0)" />
                                 </div>
 
                                 {{-- Serial Button (Products Only) --}}
@@ -235,7 +197,7 @@
                                         <x-mary-button icon="o-qr-code"
                                             wire:click="openSerialModal('{{ $cartKey }}')"
                                             class="btn-xs {{ count($item['serial_numbers'] ?? []) === $item['quantity'] ? 'btn-success' : 'btn-warning' }}"
-                                            :disabled="!$currentShift" title="Enter Serial Numbers" />
+                                            title="Enter Serial Numbers" />
                                     @else
                                         <x-mary-button icon="o-qr-code" class="btn-xs btn-error btn-disabled" disabled
                                             title="Select customer first to enter serial numbers" />
@@ -248,10 +210,10 @@
                                         <div class="flex items-center gap-1">
                                             <x-mary-input wire:model.blur="cartItems.{{ $cartKey }}.price"
                                                 wire:change="updatePrice('{{ $cartKey }}', $event.target.value)"
-                                                class="text-right input-xs" :disabled="!$currentShift" />
+                                                class="text-right input-xs" />
                                             <x-mary-button icon="o-ellipsis-vertical"
                                                 wire:click="openPriceSelection('{{ $cartKey }}')"
-                                                class="btn-xs btn-ghost" :disabled="!$currentShift" title="Select price" />
+                                                class="btn-xs btn-ghost" title="Select price" />
                                         </div>
                                     </div>
                                 @else
@@ -270,18 +232,18 @@
 
                                 {{-- Remove Button --}}
                                 <x-mary-button icon="o-trash" wire:click="removeFromCart('{{ $cartKey }}')"
-                                    class="btn-xs btn-ghost text-error" :disabled="!$currentShift" />
+                                    class="btn-xs btn-ghost text-error" />
                             </div>
                         @endforeach
 
                         {{-- Cart Actions --}}
                         <div class="flex gap-2 pt-4 border-t">
                             <x-mary-button label="Clear Cart" wire:click="clearCart" class="btn-ghost btn-sm"
-                                :disabled="!$currentShift" />
+                                />
                             <x-mary-button label="Hold Invoice" wire:click="openHoldSaleModal"
-                                class="btn-warning btn-sm" :disabled="!$currentShift" />
+                                class="btn-warning btn-sm" />
                             <x-mary-button label="Held Invoices" wire:click="openHeldSalesModal" class="btn-info btn-sm"
-                                :disabled="!$currentShift" />
+                                />
                         </div>
                     </div>
                 @else
@@ -289,10 +251,10 @@
                         <x-heroicon-o-shopping-cart class="w-12 h-12 mx-auto text-base-400" />
                         <p class="mt-2 text-base-500">Cart is empty</p>
                         <p class="text-sm text-base-400">
-                            {{ $currentShift ? 'Search for products or services to add to cart' : 'Start a shift to begin adding items' }}
+                            Search for products or services to add to cart
                         </p>
                         <x-mary-button label="Held Invoices" wire:click="openHeldSalesModal" class="btn-info btn-sm"
-                            :disabled="!$currentShift" />
+                            />
                     </div>
                 @endif
             </x-mary-card>
@@ -301,7 +263,7 @@
         {{-- Right Panel - Customer & Checkout --}}
         <div class="space-y-4 lg:col-span-4">
             {{-- Customer Selection --}}
-            <x-mary-card title="Customer" class="{{ !$currentShift ? 'opacity-50' : '' }}">
+            <x-mary-card title="Customer">
                 @if ($this->hasSerialTrackingItems())
                     <div class="p-2 mb-3 text-xs border rounded bg-info/10 border-info/20 text-info">
                         <x-heroicon-o-information-circle class="inline w-4 h-4 mr-1" />
@@ -323,23 +285,23 @@
                                 @endif
                             </div>
                             <x-mary-button icon="o-x-mark" wire:click="$set('selectedCustomer', null)"
-                                class="btn-xs btn-ghost" :disabled="!$currentShift" />
+                                class="btn-xs btn-ghost" />
                         </div>
                     </div>
                 @else
                     <div class="space-y-2">
                         <x-mary-button label="Search Customer" wire:click="openSearchCustomerModal"
-                            class="w-full btn-outline" :disabled="!$currentShift" />
+                            class="w-full btn-outline" />
                         <x-mary-button label="New Customer" wire:click="openCustomerModal" class="w-full btn-primary"
-                            :disabled="!$currentShift" />
+                            />
                         <x-mary-button label="Walk-in Customer" wire:click="selectWalkInCustomer"
-                            class="w-full btn-ghost" :disabled="!$currentShift || $this->hasSerialTrackingItems()" />
+                            class="w-full btn-ghost" :disabled="$this->hasSerialTrackingItems()" />
                     </div>
                 @endif
             </x-mary-card>
 
             {{-- Order Summary --}}
-            <x-mary-card title="Order Summary" class="{{ !$currentShift ? 'opacity-50' : '' }}">
+            <x-mary-card title="Order Summary">
                 <div class="space-y-3">
                     <div class="flex justify-between">
                         <span>Invoice Type:</span>
@@ -369,10 +331,10 @@
 
                     <div class="space-y-2">
                         <x-mary-button label="Apply Discount" wire:click="openDiscountModal"
-                            class="w-full btn-warning btn-sm" :disabled="!$currentShift" />
+                            class="w-full btn-warning btn-sm" />
                         @if ($discountAmount > 0)
                             <x-mary-button label="Remove Discount" wire:click="removeDiscount"
-                                class="w-full btn-ghost btn-sm" :disabled="!$currentShift" />
+                                class="w-full btn-ghost btn-sm" />
                         @endif
                     </div>
                 </div>
@@ -380,7 +342,7 @@
 
             {{-- Checkout Button --}}
             @php
-                $canCheckout = count($cartItems) > 0 && $currentShift && $this->validateCustomerForSerials();
+                $canCheckout = count($cartItems) > 0 && $this->validateCustomerForSerials();
             @endphp
 
             <x-mary-button label="Process Payment" wire:click="openPaymentModal" class="w-full btn-primary btn-lg"
@@ -459,42 +421,6 @@
             <x-mary-button label="Apply to All" wire:click="applyBulkPrice" class="btn-primary" />
         </x-slot:actions>
     </x-mary-modal>
-
-    {{-- Start Shift Modal --}}
-    <x-mary-modal wire:model="showStartShiftModal" title="Start Sales Shift"
-        subtitle="Initialize your cash drawer and begin sales">
-        <div class="space-y-4">
-            <x-mary-select label="Warehouse" :options="$warehouses->map(fn($w) => ['value' => $w->id, 'label' => $w->name])" wire:model="selectedWarehouse"
-                placeholder="Select warehouse" option-value="value" option-label="label" />
-
-            <x-mary-input label="Opening Cash Amount" wire:model="openingCash" type="number" step="0.01"
-                placeholder="0.00" hint="Enter the cash amount in your drawer to start the shift" />
-
-            <x-mary-textarea label="Opening Notes (Optional)" wire:model="openingNotes"
-                placeholder="Any notes about the shift start..." rows="3" />
-
-            <div class="p-4 rounded-lg bg-info/10">
-                <div class="flex items-start space-x-2">
-                    <x-heroicon-o-information-circle class="w-5 h-5 mt-0.5 text-info" />
-                    <div class="text-sm">
-                        <p class="font-medium text-info">Shift Requirements:</p>
-                        <ul class="mt-1 space-y-1 text-base-700">
-                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Count your cash drawer carefully before starting</li>
-                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ This amount will be used for end-of-shift reconciliation</li>
-                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ All sales will be tracked under this shift</li>
-                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ You cannot process sales without an active shift</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <x-slot:actions>
-            <x-mary-button label="Cancel" wire:click="$set('showStartShiftModal', false)" />
-            <x-mary-button label="Start Shift" wire:click="startShift" class="btn-primary" />
-        </x-slot:actions>
-    </x-mary-modal>
-
     {{-- Payment Modal --}}
     {{-- Enhanced Payment Modal with Additional Change Features --}}
     <x-mary-modal wire:model="showPaymentModal" title="Process Payment" subtitle="Complete the invoice transaction">

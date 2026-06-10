@@ -146,10 +146,13 @@
             <p><strong>Warehouse:</strong> {{ $sale->warehouse->name }}</p>
             <p><strong>Cashier:</strong> {{ $sale->user->name }}</p>
             <p><strong>Payment Method:</strong> {{ $sale->payment_method_label }}</p>
+            <p><strong>Payment Status:</strong> {{ $sale->payment_status_label }}</p>
             @if ($sale->payment_method === 'terms')
                 <p><strong>Payment Terms:</strong> {{ $sale->payment_terms ?? 'N/A' }}</p>
                 <p><strong>Due Date:</strong> {{ $sale->due_date?->format('M d, Y') ?? 'N/A' }}</p>
-                <p><strong>Payment Status:</strong> {{ ucfirst($sale->payment_status ?? 'unpaid') }}</p>
+                @if (!$sale->is_paid && $sale->days_delayed > 0)
+                    <p><strong>Delay:</strong> {{ $sale->days_delayed }} days</p>
+                @endif
             @endif
         </div>
 

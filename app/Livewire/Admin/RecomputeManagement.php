@@ -20,7 +20,7 @@ class RecomputeManagement extends Component
             ->layout('layouts.app', ['title' => 'Recompute Return Totals']);
     }
 
-    public function runRecompute($type = 'all', $dryRun = true)
+    public function runRecompute($dryRun = true)
     {
         if ($this->isRunning) {
             $this->warning('A recompute operation is already running...');
@@ -31,19 +31,8 @@ class RecomputeManagement extends Component
         $this->output = "🔄 Starting recomputation...\n";
 
         try {
-            // Build the command
             $command = 'returns:recompute';
-
-            switch ($type) {
-                case 'shifts':
-                    $command .= ' --shifts';
-                    break;
-                case 'items':
-                    $command .= ' --items';
-                    break;
-                default:
-                    $command .= ' --all';
-            }
+            $command .= ' --items';
 
             if ($dryRun) {
                 $command .= ' --dry-run';

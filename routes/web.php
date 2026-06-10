@@ -6,12 +6,12 @@ use App\Exports\ProductsExport;
 use App\Livewire\Admin\UserManual;
 use App\Livewire\Sales\PointOfSale;
 use App\Livewire\Sales\SalesHistory;
+use App\Livewire\Sales\PaymentManagement;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Admin\UserManagement;
 use App\Livewire\Reports\SalesReports;
 use App\Livewire\Inventory\StockLevels;
-use App\Livewire\Sales\ShiftManagement;
 use App\Livewire\Admin\WarrantyTracking;
 use App\Livewire\Reports\CustomerReports;
 use App\Livewire\Sales\ReturnsManagement;
@@ -30,6 +30,7 @@ use App\Livewire\Purchasing\SupplierManagement;
 use App\Livewire\Purchasing\PurchaseOrderManagement;
 use App\Livewire\Inventory\InventoryLocationManagement;
 use App\Http\Controllers\InvoiceController; // Add this import
+use App\Http\Controllers\StatementOfAccountController;
 
 
 
@@ -62,21 +63,11 @@ Route::middleware([
         Route::get('/recompute', RecomputeManagement::class)->name('recompute');
 
         Route::post('/recompute/run', function () {
-            $type = request('type', 'all');
             $dryRun = request('dry_run', false);
 
             $command = 'returns:recompute';
 
-            switch ($type) {
-                case 'shifts':
-                    $command .= ' --shifts';
-                    break;
-                case 'items':
-                    $command .= ' --items';
-                    break;
-                default:
-                    $command .= ' --all';
-            }
+            $command .= ' --items';
 
             if ($dryRun) {
                 $command .= ' --dry-run';
@@ -116,8 +107,8 @@ Route::middleware([
         Route::redirect('/pos', '/sales/invoice');
         Route::get('/invoice', PointOfSale::class)->name('pos');
         Route::get('/history', SalesHistory::class)->name('history');
+        Route::get('/payments', PaymentManagement::class)->name('payments');
         Route::get('/customers', CustomerManagement::class)->name('customers');
-        Route::get('/shifts', ShiftManagement::class)->name('shifts');
         Route::get('/returns', ReturnsManagement::class)->name('returns');
     });
 
@@ -127,6 +118,11 @@ Route::middleware([
         Route::get('/{sale}/preview', [InvoiceController::class, 'preview'])->name('preview');
         Route::get('/{sale}/e-invoice.json', [InvoiceController::class, 'downloadEInvoiceJson'])->name('e-invoice.json');
         Route::get('/{sale}/e-invoice.xml', [InvoiceController::class, 'downloadEInvoiceXml'])->name('e-invoice.xml');
+    });
+
+    Route::middleware(['permission:process_sales'])->prefix('soa')->name('soa.')->group(function () {
+        Route::get('/customer/{customer}/preview', [StatementOfAccountController::class, 'preview'])->name('preview');
+        Route::get('/customer/{customer}/download', [StatementOfAccountController::class, 'download'])->name('download');
     });
 
     // Purchasing Routes - For users with manage_inventory permission
@@ -158,7 +154,7 @@ Route::middleware([
 
 
     // Reports Routes - UPDATED: Replace placeholders with actual implementations
-    Route::middleware(['permission:view_reports'])->prefix('reports')->name('reports.')->group(function () {
+    Route::middleware(['reports.access'])->prefix('reports')->name('reports.')->group(function () {
         // Sales Reports - Now implemented with full functionality
         Route::get('/sales', SalesReports::class)->name('sales');
 

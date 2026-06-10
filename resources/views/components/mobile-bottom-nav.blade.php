@@ -34,7 +34,7 @@
 
         {{-- Sales --}}
         <a href="{{ route('sales.history') }}"
-            class="flex flex-col items-center justify-center text-xs {{ request()->routeIs('sales.history*') || request()->routeIs('sales.reports*') ? 'text-primary' : 'text-base-content/60' }}">
+            class="flex flex-col items-center justify-center text-xs {{ request()->routeIs('sales.history*') || request()->routeIs('sales.payments*') || request()->routeIs('sales.reports*') ? 'text-primary' : 'text-base-content/60' }}">
             <svg class="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z">
@@ -156,14 +156,15 @@
                 <span>Reports</span>
             </a>
 
-            <a href="{{ route('sales.shifts') }}"
-                class="flex items-center gap-3 p-3 rounded-lg hover:bg-base-200 {{ request()->routeIs('sales.shifts*') ? 'bg-primary text-primary-content' : '' }}"
+            <a href="{{ route('sales.payments') }}"
+                class="flex items-center gap-3 p-3 rounded-lg hover:bg-base-200 {{ request()->routeIs('sales.payments*') ? 'bg-primary text-primary-content' : '' }}"
                 onclick="hideMoreMenu()">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0v-.75A.75.75 0 003 15.75h-.75m1.5 1.5h-.375A1.125 1.125 0 012.25 16.125V15m15-4.5a3 3 0 11-6 0 3 3 0 016 0z">
+                    </path>
                 </svg>
-                <span>Shifts</span>
+                <span>Payments</span>
             </a>
 
             @can('admin-access')

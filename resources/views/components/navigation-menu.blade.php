@@ -71,6 +71,8 @@
                                         class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Invoice</a>
                                     <a href="{{ route('sales.history') }}"
                                         class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Sales History</a>
+                                    <a href="{{ route('sales.payments') }}"
+                                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Payments</a>
                                     <a href="{{ route('sales.customers') }}"
                                         class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Customers</a>
                                 </div>

@@ -25,10 +25,11 @@ class ReportsAccess
             return $next($request);
         }
 
-        // For other roles, check specific permissions (if you have a permissions system)
-        // You can customize this based on your role/permission structure
-        if ($user->role === 'cashier' && $request->routeIs('reports.sales')) {
-            // Allow cashiers to view only sales reports
+        if ($user->hasPermission('view_reports')) {
+            return $next($request);
+        }
+
+        if ($user->role === 'cashier' && $request->routeIs('reports.sales*')) {
             return $next($request);
         }
 
