@@ -81,6 +81,7 @@ class PointOfSale extends Component
     public $showPriceModal = false;
     public $showBulkPriceModal = false;
     public $selectedCartIndex = null;
+    public $selectedCartKey = null;
     public $availablePrices = [];
     public $showAddPriceModal = false;
     public $pendingProductId = null;
@@ -116,7 +117,7 @@ class PointOfSale extends Component
         return view('livewire.sales.point-of-sale', [
             'warehouses' => $warehouses,
             'customers' => $customers,
-        ])->layout('layouts.pos', ['title' => 'Invoice']);
+        ])->layout('layouts.app', ['title' => 'Invoice']);
     }
 
     public function updatedInvoiceType($type)
@@ -126,8 +127,6 @@ class PointOfSale extends Component
         $this->searchResults = [];
         $this->searchService = '';
         $this->serviceResults = [];
-        $this->taxType = $this->invoiceType === 'service' ? 'ewt_service_2' : 'vat_12';
-        $this->updatedTaxType($this->taxType);
         $this->updateCartTotals();
     }
 
@@ -135,6 +134,17 @@ class PointOfSale extends Component
     {
         $this->taxType = in_array($type, ['none', 'vat_12', 'ewt_sales_1', 'ewt_service_2'], true) ? $type : 'vat_12';
         $this->taxRate = $this->taxRateForType($this->taxType);
+        $this->updateCartTotals();
+    }
+
+    public function updatedCartItems(): void
+    {
+        foreach ($this->cartItems as $cartKey => $item) {
+            if (empty($item['tax_type'])) {
+                $this->cartItems[$cartKey]['tax_type'] = 'vat_12';
+            }
+        }
+
         $this->updateCartTotals();
     }
 
@@ -148,13 +158,14 @@ class PointOfSale extends Component
         };
     }
 
-    public function taxLabel(): string
+    public function taxLabel(?string $type = null): string
     {
-        return match ($this->taxType) {
+        return match ($type ?? $this->taxType) {
             'vat_12' => 'VAT (12% inclusive)',
             'ewt_sales_1' => 'EWT (1% on sales, net of VAT)',
             'ewt_service_2' => 'EWT (2% on services, net of VAT)',
-            default => 'No Tax',
+            'mixed' => 'Mixed Tax',
+            default => 'Non-VAT',
         };
     }
 
@@ -171,6 +182,65 @@ class PointOfSale extends Component
         return $amount * ($this->taxRate / 100);
     }
 
+    private function lineGrossAmount(array $item): float
+    {
+        return (float) ($item['quantity'] ?? 0) * (float) ($item['price'] ?? 0);
+    }
+
+    public function calculateLineBilling(array $item, ?float $discountRatio = null): array
+    {
+        $grossAmount = $this->lineGrossAmount($item);
+        $discountRatio ??= $this->subtotal > 0 ? ((float) $this->discountAmount / (float) $this->subtotal) : 0;
+        $discountAmount = $grossAmount * $discountRatio;
+        $discountedAmount = max(0, $grossAmount - $discountAmount);
+        $taxType = $item['tax_type'] ?? 'vat_12';
+        $taxRate = $this->taxRateForType($taxType);
+
+        if ($taxType === 'vat_12') {
+            $taxAmount = $discountedAmount - ($discountedAmount / 1.12);
+            $netAmount = $discountedAmount / 1.12;
+            $totalAmount = $discountedAmount;
+        } elseif (in_array($taxType, ['ewt_sales_1', 'ewt_service_2'], true)) {
+            $netAmount = $discountedAmount / 1.12;
+            $taxAmount = $netAmount * ($taxRate / 100);
+            $totalAmount = max(0, $discountedAmount - $taxAmount);
+        } else {
+            $taxAmount = $discountedAmount * ($taxRate / 100);
+            $netAmount = $discountedAmount;
+            $totalAmount = $discountedAmount + $taxAmount;
+        }
+
+        return [
+            'gross_amount' => $grossAmount,
+            'discount_amount' => $discountAmount,
+            'discounted_amount' => $discountedAmount,
+            'net_amount' => $netAmount,
+            'tax_type' => $taxType,
+            'tax_rate' => $taxRate,
+            'tax_amount' => $taxAmount,
+            'total_amount' => $totalAmount,
+        ];
+    }
+
+    public function calculateBilling(): array
+    {
+        $grossSubtotal = collect($this->cartItems)->sum(fn($item) => $this->lineGrossAmount($item));
+        $discountRatio = $grossSubtotal > 0 ? ((float) $this->discountAmount / (float) $grossSubtotal) : 0;
+        $lineBillings = collect($this->cartItems)->map(fn($item) => $this->calculateLineBilling($item, $discountRatio));
+        $taxTypes = $lineBillings->pluck('tax_type')->unique()->values();
+        $taxType = $taxTypes->count() === 1 ? $taxTypes->first() : 'mixed';
+
+        return [
+            'subtotal' => $lineBillings->sum('net_amount'),
+            'gross_subtotal' => $grossSubtotal,
+            'discount_amount' => $lineBillings->sum('discount_amount'),
+            'tax_type' => $taxType,
+            'tax_rate' => $taxTypes->count() === 1 ? $this->taxRateForType($taxType) : 0,
+            'tax_amount' => $lineBillings->sum('tax_amount'),
+            'total' => $lineBillings->sum('total_amount'),
+        ];
+    }
+
     public function calculateVatExclusiveAmount(float $amount): float
     {
         return $amount / 1.12;
@@ -183,18 +253,24 @@ class PointOfSale extends Component
 
     public function displaySubtotalAmount(): float
     {
-        if (in_array($this->taxType, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)) {
-            return $this->calculateVatExclusiveAmount($this->taxableGrossAmount());
-        }
-
-        return $this->taxableGrossAmount();
+        return $this->calculateBilling()['subtotal'];
     }
 
     public function subtotalLabel(): string
     {
-        return in_array($this->taxType, ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true)
+        return collect($this->cartItems)->contains(fn($item) => in_array($item['tax_type'] ?? 'vat_12', ['vat_12', 'ewt_sales_1', 'ewt_service_2'], true))
             ? 'Subtotal (Net of VAT):'
             : 'Subtotal:';
+    }
+
+    public function taxOptions(): array
+    {
+        return [
+            ['value' => 'vat_12', 'label' => 'VAT (12% inclusive)'],
+            ['value' => 'none', 'label' => 'Non-VAT'],
+            ['value' => 'ewt_sales_1', 'label' => 'EWT (1% on sales, net of VAT)'],
+            ['value' => 'ewt_service_2', 'label' => 'EWT (2% on services, net of VAT)'],
+        ];
     }
 
     public function calculateTotalAmount(float $amount, float $taxAmount): float
@@ -250,6 +326,7 @@ class PointOfSale extends Component
                 'quantity' => 1,
                 'available_stock' => $availableStock,
                 'subtotal' => $product->selling_price,
+                'tax_type' => 'vat_12',
                 'track_serial' => $product->track_serial,
                 'serial_numbers' => [],
             ];
@@ -288,6 +365,7 @@ class PointOfSale extends Component
                 'price' => $service->price,
                 'quantity' => 1,
                 'subtotal' => $service->price,
+                'tax_type' => 'vat_12',
                 'track_serial' => false,  // Services never track serials
                 'serial_numbers' => [],
                 'available_stock' => null, // Services don't have stock
@@ -514,20 +592,21 @@ class PointOfSale extends Component
      */
     public function selectPrice($priceType)
     {
-        if (!$this->selectedCartIndex || !isset($this->availablePrices[$priceType])) {
+        if (!$this->selectedCartKey || !isset($this->cartItems[$this->selectedCartKey]) || !isset($this->availablePrices[$priceType])) {
             return;
         }
 
         $newPrice = $this->availablePrices[$priceType]['value'];
         $priceLabel = $this->availablePrices[$priceType]['label']; // Store label before clearing
 
-        $this->cartItems[$this->selectedCartIndex]['price'] = $newPrice;
-        $this->cartItems[$this->selectedCartIndex]['subtotal'] =
-            $this->cartItems[$this->selectedCartIndex]['quantity'] * $newPrice;
+        $this->cartItems[$this->selectedCartKey]['price'] = $newPrice;
+        $this->cartItems[$this->selectedCartKey]['subtotal'] =
+            $this->cartItems[$this->selectedCartKey]['quantity'] * $newPrice;
 
         $this->updateCartTotals();
         $this->showPriceModal = false;
         $this->selectedCartIndex = null;
+        $this->selectedCartKey = null;
         $this->availablePrices = []; // Clear after storing the label
 
         $this->success('Price updated to ' . $priceLabel . ': ₱' . number_format($newPrice, 2));
@@ -649,7 +728,7 @@ class PointOfSale extends Component
 
         $selectedPrice = $this->availablePrices[$priceType]['value'];
         $priceLabel = $this->availablePrices[$priceType]['label']; // Store label before clearing
-        $cartKey = $this->pendingProductId;
+        $cartKey = 'product_' . $this->pendingProductId;
 
         if (isset($this->cartItems[$cartKey])) {
             if ($this->cartItems[$cartKey]['quantity'] >= $availableStock) {
@@ -661,13 +740,18 @@ class PointOfSale extends Component
                 $this->cartItems[$cartKey]['quantity'] * $this->cartItems[$cartKey]['price'];
         } else {
             $this->cartItems[$cartKey] = [
+                'item_type' => 'product',
                 'product_id' => $product->id,
+                'service_id' => null,
                 'name' => $product->name,
-                'sku' => $product->sku,
+                'code' => $product->sku,
                 'price' => $selectedPrice,
                 'quantity' => 1,
                 'available_stock' => $availableStock,
                 'subtotal' => $selectedPrice,
+                'tax_type' => 'vat_12',
+                'track_serial' => $product->track_serial,
+                'serial_numbers' => [],
             ];
         }
 
@@ -920,13 +1004,15 @@ class PointOfSale extends Component
                 return;
             }
 
+            $billing = $this->calculateBilling();
+
             // Create sale record
             $sale = Sale::create([
                 'customer_id' => $this->selectedCustomer,
                 'promotion_code' => $this->discountAmount > 0 ? $this->discountLabel() : null,
                 'invoice_type' => $this->invoiceType,
-                'tax_type' => $this->taxType,
-                'tax_rate' => $this->taxRate,
+                'tax_type' => $billing['tax_type'],
+                'tax_rate' => $billing['tax_rate'],
                 'warehouse_id' => $this->selectedWarehouse,
                 'user_id' => auth()->id(),
                 'subtotal' => $this->subtotal,
@@ -989,6 +1075,9 @@ class PointOfSale extends Component
             'quantity' => $item['quantity'],
             'unit_price' => $item['price'],
             'total_price' => $item['subtotal'],
+            'tax_type' => $item['tax_type'] ?? 'vat_12',
+            'tax_rate' => $this->taxRateForType($item['tax_type'] ?? 'vat_12'),
+            'tax_amount' => $this->calculateLineBilling($item)['tax_amount'],
             'cost_price' => $product->cost_price ?? 0,
         ]);
 
@@ -1081,6 +1170,9 @@ class PointOfSale extends Component
             'quantity' => $item['quantity'],
             'unit_price' => $item['price'],
             'total_price' => $item['subtotal'],
+            'tax_type' => $item['tax_type'] ?? 'vat_12',
+            'tax_rate' => $this->taxRateForType($item['tax_type'] ?? 'vat_12'),
+            'tax_amount' => $this->calculateLineBilling($item)['tax_amount'],
             'cost_price' => 0, // Services typically have no cost
         ]);
 
@@ -1308,6 +1400,8 @@ class PointOfSale extends Component
                     'quantity' => 1,
                     'available_stock' => $availableStock,
                     'subtotal' => $product->selling_price,
+                    'tax_type' => 'vat_12',
+                    'track_serial' => $product->track_serial,
                 ];
             }
 
@@ -1328,7 +1422,7 @@ class PointOfSale extends Component
 
         $addedCount = 0;
         foreach ($this->scannedItems as $scannedItem) {
-            $cartKey = $scannedItem['product_id'];
+            $cartKey = 'product_' . $scannedItem['product_id'];
 
             if (isset($this->cartItems[$cartKey])) {
                 // Update existing cart item
@@ -1337,7 +1431,20 @@ class PointOfSale extends Component
                     $this->cartItems[$cartKey]['quantity'] * $this->cartItems[$cartKey]['price'];
             } else {
                 // Add as new cart item
-                $this->cartItems[$cartKey] = $scannedItem;
+                $this->cartItems[$cartKey] = [
+                    'item_type' => 'product',
+                    'product_id' => $scannedItem['product_id'],
+                    'service_id' => null,
+                    'name' => $scannedItem['name'],
+                    'code' => $scannedItem['sku'],
+                    'price' => $scannedItem['price'],
+                    'quantity' => $scannedItem['quantity'],
+                    'available_stock' => $scannedItem['available_stock'],
+                    'subtotal' => $scannedItem['subtotal'],
+                    'tax_type' => $scannedItem['tax_type'] ?? 'vat_12',
+                    'track_serial' => $scannedItem['track_serial'] ?? false,
+                    'serial_numbers' => [],
+                ];
             }
             $addedCount++;
         }
@@ -1518,14 +1625,16 @@ class PointOfSale extends Component
         ]);
 
         try {
+            $billing = $this->calculateBilling();
+
             // Create a held sale record
             $heldSale = Sale::create([
                 'invoice_number' => $this->holdReference,
                 'customer_id' => $this->selectedCustomer,
                 'promotion_code' => $this->discountAmount > 0 ? $this->discountLabel() : null,
                 'invoice_type' => $this->invoiceType,
-                'tax_type' => $this->taxType,
-                'tax_rate' => $this->taxRate,
+                'tax_type' => $billing['tax_type'],
+                'tax_rate' => $billing['tax_rate'],
                 'warehouse_id' => $this->selectedWarehouse,
                 'user_id' => auth()->id(),
                 'subtotal' => $this->subtotal,
@@ -1554,6 +1663,9 @@ class PointOfSale extends Component
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['price'],
                     'total_price' => $item['subtotal'],
+                    'tax_type' => $item['tax_type'] ?? 'vat_12',
+                    'tax_rate' => $this->taxRateForType($item['tax_type'] ?? 'vat_12'),
+                    'tax_amount' => $this->calculateLineBilling($item)['tax_amount'],
                     'cost_price' => $product->cost_price ?? 0,
                 ]);
             }
@@ -1636,6 +1748,7 @@ class PointOfSale extends Component
                         'quantity' => $item->quantity,
                         'available_stock' => $availableStock,
                         'subtotal' => $item->total_price,
+                        'tax_type' => $item->tax_type ?? $heldSale->tax_type ?? 'vat_12',
                         'track_serial' => $product->track_serial,
                         'serial_numbers' => [],
                     ];
@@ -1650,6 +1763,7 @@ class PointOfSale extends Component
                         'price' => $item->unit_price,
                         'quantity' => $item->quantity,
                         'subtotal' => $item->total_price,
+                        'tax_type' => $item->tax_type ?? $heldSale->tax_type ?? 'vat_12',
                     ];
                 }
             }
@@ -1741,12 +1855,6 @@ class PointOfSale extends Component
             return;
         }
 
-        // Only allow price changes for products, not services
-        if ($this->cartItems[$cartKey]['item_type'] === 'service') {
-            $this->error('Service prices cannot be modified.');
-            return;
-        }
-
         $newPrice = max(0, floatval($newPrice));
         $this->cartItems[$cartKey]['price'] = $newPrice;
         $this->cartItems[$cartKey]['subtotal'] = $this->cartItems[$cartKey]['quantity'] * $newPrice;
@@ -1760,9 +1868,8 @@ class PointOfSale extends Component
             return;
         }
 
-        // Only allow price selection for products
         if ($this->cartItems[$cartKey]['item_type'] === 'service') {
-            $this->error('Service prices cannot be modified.');
+            $this->error('Preset price selection is only available for products. Edit the service unit price directly.');
             return;
         }
 
@@ -1809,16 +1916,20 @@ class PointOfSale extends Component
     // Update the existing updateCartTotals method to handle mixed cart
     public function updateCartTotals()
     {
-        $this->subtotal = 0;
-
-        foreach ($this->cartItems as $item) {
-            $this->subtotal += $item['subtotal'];
+        foreach ($this->cartItems as $cartKey => $item) {
+            if (empty($item['tax_type'])) {
+                $this->cartItems[$cartKey]['tax_type'] = 'vat_12';
+            }
         }
 
+        $this->subtotal = collect($this->cartItems)->sum(fn($item) => $this->lineGrossAmount($item));
+
         $this->recalculateDiscount();
-        $taxableAmount = $this->taxableGrossAmount();
-        $this->taxAmount = $this->calculateTaxAmount($taxableAmount);
-        $this->totalAmount = $this->calculateTotalAmount($taxableAmount, $this->taxAmount);
+        $billing = $this->calculateBilling();
+        $this->taxType = $billing['tax_type'];
+        $this->taxRate = $billing['tax_rate'];
+        $this->taxAmount = $billing['tax_amount'];
+        $this->totalAmount = $billing['total'];
         $this->calculateChange();
     }
 }

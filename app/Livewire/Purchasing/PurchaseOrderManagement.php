@@ -23,6 +23,7 @@ class PurchaseOrderManagement extends Component
     public $showReceiveModal = false;
     public $showDetailsModal = false;
     public $editMode = false;
+    public $showReceivePage = false;
     public $selectedPO = null;
     public $viewingPO = null;
 
@@ -438,7 +439,8 @@ class PurchaseOrderManagement extends Component
             return;
         }
 
-        $this->selectedPO = $po;
+        $this->selectedPO = $po->load(['supplier', 'warehouse', 'items.product']);
+
         $this->receivingItems = $po->items->map(function ($item) {
             return [
                 'id' => $item->id,
@@ -457,7 +459,15 @@ class PurchaseOrderManagement extends Component
             ];
         })->toArray();
 
-        $this->showReceiveModal = true;
+        $this->showReceivePage = true;
+    }
+
+    public function closeReceivePage()
+    {
+        $this->showReceivePage = false;
+        $this->selectedPO = null;
+        $this->receivingItems = [];
+        $this->resetValidation();
     }
 
     public function processReceiving()
@@ -880,8 +890,7 @@ class PurchaseOrderManagement extends Component
      */
     public function printPO(PurchaseOrder $po)
     {
-        // Implementation for printing PO
-        $this->info("Print functionality for PO {$po->po_number} coming soon!");
+        return redirect()->route('purchasing.purchase-orders.print', $po);
     }
 
     /**

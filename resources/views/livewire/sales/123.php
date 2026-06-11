@@ -10,9 +10,17 @@
 
     <x-mary-header title="Invoice" subtitle="Create client-specific invoices with editable line pricing" separator />
 
-    <div class="grid grid-cols-1 gap-2 xl:grid-cols-12">
+    <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
         {{-- Left Panel - Product Search & Cart --}}
-        <div class="space-y-4 xl:col-span-7 2xl:col-span-8">
+        <div class="space-y-4 xl:col-span-9 2xl:col-span-10">
+            <x-mary-card title="{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <x-mary-select label="Invoice Type" :options="[
+                        ['value' => 'sales', 'label' => 'Sales Invoice'],
+                        ['value' => 'service', 'label' => 'Service Invoice'],
+                    ]" wire:model.live="invoiceType" option-label="label" option-value="value" />
+                </div>
+            </x-mary-card>
 
             {{-- Product Search --}}
             <x-mary-card title="Invoice Items">
@@ -363,17 +371,7 @@
         </div>
 
         {{-- Right Panel - Customer & Checkout --}}
-        <div class="space-y-2 xl:col-span-5 2xl:col-span-4">
-
-            <x-mary-card title="{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}">
-                <div class="grid grid-cols-1 md:grid-cols-2">
-                    <x-mary-select label="Invoice Type" :options="[
-                        ['value' => 'sales', 'label' => 'Sales Invoice'],
-                        ['value' => 'service', 'label' => 'Service Invoice'],
-                    ]" wire:model.live="invoiceType" option-label="label" option-value="value" />
-                </div>
-            </x-mary-card>
-
+        <div class="space-y-4 xl:col-span-3 2xl:col-span-2">
             {{-- Customer Selection --}}
             <x-mary-card title="Customer">
                 @if ($this->hasSerialTrackingItems())

@@ -20,7 +20,131 @@
         </x-slot:actions>
     </x-mary-header>
 
-    @if ($showModal)
+    @if ($showReceivePage)
+        {{-- Full Page Receiving Form --}}
+        <div class="space-y-6">
+            <x-mary-card>
+                <div class="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold">
+                            Receive Items - {{ $selectedPO?->po_number }}
+                        </h2>
+                        <p class="text-sm text-gray-500">
+                            Process pending items for this purchase order.
+                        </p>
+                    </div>
+
+                    <x-mary-badge value="{{ $selectedPO?->status_display }}" class="badge-warning" />
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-2">
+                    <div class="p-4 rounded-lg bg-base-200">
+                        <div class="text-sm text-gray-500">Supplier</div>
+                        <div class="font-semibold">{{ $selectedPO?->supplier?->name }}</div>
+                    </div>
+
+                    <div class="p-4 rounded-lg bg-base-200">
+                        <div class="text-sm text-gray-500">Warehouse</div>
+                        <div class="font-semibold">{{ $selectedPO?->warehouse?->name }}</div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    @foreach ($receivingItems as $index => $item)
+                        <div class="p-5 border rounded-xl bg-base-100">
+                            <div class="flex flex-col gap-4">
+
+                                <div class="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                                    <div>
+                                        <div class="text-xs text-gray-500">Product</div>
+                                        <div class="text-lg font-semibold">
+                                            {{ $item['product_name'] }}
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-3 gap-3 text-center md:min-w-80">
+                                        <div class="p-3 rounded-lg bg-base-200">
+                                            <div class="text-xs text-gray-500">Ordered</div>
+                                            <div class="font-bold">{{ $item['quantity_ordered'] }}</div>
+                                        </div>
+
+                                        <div class="p-3 rounded-lg bg-base-200">
+                                            <div class="text-xs text-gray-500">Received</div>
+                                            <div class="font-bold">{{ $item['quantity_received'] }}</div>
+                                        </div>
+
+                                        <div class="p-3 rounded-lg bg-warning/10">
+                                            <div class="text-xs text-warning">Pending</div>
+                                            <div class="font-bold text-warning">{{ $item['quantity_pending'] }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+                                    <x-mary-input
+                                        label="Receiving Now"
+                                        wire:model="receivingItems.{{ $index }}.receiving_quantity"
+                                        type="number"
+                                        min="0"
+                                        max="{{ $item['quantity_pending'] }}" />
+
+                                    @if ($item['track_batch'] || $item['track_expiry'])
+                                        <x-mary-input
+                                            label="Batch Number"
+                                            wire:model="receivingItems.{{ $index }}.batch_number"
+                                            placeholder="Batch number" />
+
+                                        <x-mary-input
+                                            label="Lot Number"
+                                            wire:model="receivingItems.{{ $index }}.lot_number"
+                                            placeholder="Optional" />
+
+                                        <x-mary-input
+                                            label="Manufactured Date"
+                                            wire:model="receivingItems.{{ $index }}.manufactured_date"
+                                            type="date" />
+
+                                        @if ($item['track_expiry'])
+                                            <x-mary-input
+                                                label="Expiry Date"
+                                                wire:model="receivingItems.{{ $index }}.expiry_date"
+                                                type="date" />
+                                        @else
+                                            <div class="p-4 rounded-lg bg-base-200">
+                                                <div class="text-xs text-gray-500">Expiry Date</div>
+                                                <div class="font-medium text-gray-400">No expiry tracking</div>
+                                            </div>
+                                        @endif
+                                    @else
+                                        <div class="p-4 rounded-lg md:col-span-4 bg-base-200">
+                                            <div class="text-xs text-gray-500">Tracking</div>
+                                            <div class="font-medium text-gray-400">
+                                                This product does not require batch or expiry tracking.
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </x-mary-card>
+
+            <div class="sticky bottom-0 z-10 p-4 border rounded-lg bg-base-100/95 backdrop-blur">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
+                    <x-mary-button label="Cancel" wire:click="closeReceivePage" class="btn-ghost" />
+
+                    <x-mary-button
+                        label="Process Receiving"
+                        wire:click="processReceiving"
+                        class="btn-primary"
+                        wire:confirm="Process receiving for this purchase order?" />
+                </div>
+            </div>
+        </div>
+
+    @elseif ($showModal)
         {{-- Full Page Create/Edit Purchase Order Form --}}
         <div class="space-y-6">
             <x-mary-card>
@@ -355,97 +479,141 @@
 
     @endif
 
-    {{-- Receive Items Modal --}}
-    <x-mary-modal wire:model="showReceiveModal" title="Receive Items - {{ $selectedPO?->po_number }}"
-        box-class="max-w-4xl">
+    {{-- Receive Items Drawer --}}
+    <x-mary-drawer
+        wire:model="showReceiveModal"
+        title="Receive Items - {{ $selectedPO?->po_number }}"
+        subtitle="Process pending purchase order items"
+        separator
+        with-close-button
+        close-on-escape
+        class="w-full lg:w-11/12 xl:w-10/12 2xl:w-9/12"
+        right>
+
         @if ($selectedPO)
-            <div class="space-y-4">
-                <div class="p-4 rounded-lg bg-info/10">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <div class="text-sm text-gray-600">Supplier:</div>
-                            <div class="font-medium">{{ $selectedPO->supplier->name }}</div>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-600">Warehouse:</div>
-                            <div class="font-medium">{{ $selectedPO->warehouse->name }}</div>
-                        </div>
+            <div class="space-y-6">
+
+                {{-- PO Summary --}}
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="p-4 rounded-lg bg-info/10">
+                        <div class="text-sm text-gray-600">Supplier</div>
+                        <div class="font-semibold">{{ $selectedPO->supplier->name }}</div>
+                    </div>
+
+                    <div class="p-4 rounded-lg bg-info/10">
+                        <div class="text-sm text-gray-600">Warehouse</div>
+                        <div class="font-semibold">{{ $selectedPO->warehouse->name }}</div>
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Product</th>
-                                <th>Ordered</th>
-                                <th>Previously Received</th>
-                                <th>Pending</th>
-                                <th>Receiving Now</th>
-                                <th>Batch / Lot</th>
-                                <th>Manufactured</th>
-                                <th>Expiry</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($receivingItems as $index => $item)
-                                <tr>
-                                    <td>{{ $item['product_name'] }}</td>
-                                    <td>{{ $item['quantity_ordered'] }}</td>
-                                    <td>{{ $item['quantity_received'] }}</td>
-                                    <td>{{ $item['quantity_pending'] }}</td>
-                                    <td>
-                                        <x-mary-input
-                                            wire:model="receivingItems.{{ $index }}.receiving_quantity"
-                                            type="number" min="0" max="{{ $item['quantity_pending'] }}" />
-                                    </td>
-                                    <td>
-                                        @if ($item['track_batch'] || $item['track_expiry'])
-                                            <div class="space-y-2">
-                                                <x-mary-input
-                                                    wire:model="receivingItems.{{ $index }}.batch_number"
-                                                    placeholder="Batch number" />
-                                                <x-mary-input
-                                                    wire:model="receivingItems.{{ $index }}.lot_number"
-                                                    placeholder="Lot number (optional)" />
-                                            </div>
-                                        @else
-                                            <span class="text-gray-400">Not tracked</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($item['track_batch'] || $item['track_expiry'])
+                {{-- Receiving Items --}}
+                <div class="space-y-4">
+                    @foreach ($receivingItems as $index => $item)
+                        <div class="p-4 border rounded-xl bg-base-100">
+                            <div class="grid grid-cols-1 gap-4 xl:grid-cols-12">
+
+                                {{-- Product --}}
+                                <div class="xl:col-span-3">
+                                    <div class="text-xs text-gray-500">Product</div>
+                                    <div class="font-semibold">
+                                        {{ $item['product_name'] }}
+                                    </div>
+                                </div>
+
+                                {{-- Quantities --}}
+                                <div class="grid grid-cols-3 gap-3 xl:col-span-3">
+                                    <div>
+                                        <div class="text-xs text-gray-500">Ordered</div>
+                                        <div class="font-medium">{{ $item['quantity_ordered'] }}</div>
+                                    </div>
+
+                                    <div>
+                                        <div class="text-xs text-gray-500">Received</div>
+                                        <div class="font-medium">{{ $item['quantity_received'] }}</div>
+                                    </div>
+
+                                    <div>
+                                        <div class="text-xs text-gray-500">Pending</div>
+                                        <div class="font-medium text-warning">{{ $item['quantity_pending'] }}</div>
+                                    </div>
+                                </div>
+
+                                {{-- Receiving Now --}}
+                                <div class="xl:col-span-2">
+                                    <x-mary-input
+                                        label="Receiving Now"
+                                        wire:model="receivingItems.{{ $index }}.receiving_quantity"
+                                        type="number"
+                                        min="0"
+                                        max="{{ $item['quantity_pending'] }}" />
+                                </div>
+
+                                {{-- Batch / Lot --}}
+                                <div class="xl:col-span-2">
+                                    @if ($item['track_batch'] || $item['track_expiry'])
+                                        <div class="space-y-2">
                                             <x-mary-input
-                                                wire:model="receivingItems.{{ $index }}.manufactured_date"
-                                                type="date" />
-                                        @else
-                                            <span class="text-gray-400">-</span>
-                                        @endif
-                                    </td>
-                                    <td>
+                                                label="Batch No."
+                                                wire:model="receivingItems.{{ $index }}.batch_number"
+                                                placeholder="Batch number" />
+
+                                            <x-mary-input
+                                                label="Lot No."
+                                                wire:model="receivingItems.{{ $index }}.lot_number"
+                                                placeholder="Optional" />
+                                        </div>
+                                    @else
+                                        <div class="text-sm text-gray-400">
+                                            Not tracked
+                                        </div>
+                                    @endif
+                                </div>
+
+                                {{-- Dates --}}
+                                <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:col-span-2">
+                                    @if ($item['track_batch'] || $item['track_expiry'])
+                                        <x-mary-input
+                                            label="Manufactured"
+                                            wire:model="receivingItems.{{ $index }}.manufactured_date"
+                                            type="date" />
+
                                         @if ($item['track_expiry'])
                                             <x-mary-input
+                                                label="Expiry"
                                                 wire:model="receivingItems.{{ $index }}.expiry_date"
                                                 type="date" />
-                                        @elseif ($item['track_batch'])
-                                            <span class="text-gray-400">No expiry</span>
                                         @else
-                                            <span class="text-gray-400">-</span>
+                                            <div class="text-sm text-gray-400">
+                                                No expiry
+                                            </div>
                                         @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+                                    @else
+                                        <div class="text-sm text-gray-400">
+                                            -
+                                        </div>
+                                    @endif
+                                </div>
+
+                            </div>
+                        </div>
+                    @endforeach
                 </div>
             </div>
 
             <x-slot:actions>
-                <x-mary-button label="Cancel" wire:click="$set('showReceiveModal', false)" />
-                <x-mary-button label="Process Receiving" wire:click="processReceiving" class="btn-primary" />
+                <x-mary-button
+                    label="Cancel"
+                    wire:click="$set('showReceiveModal', false)"
+                    class="btn-ghost" />
+
+                <x-mary-button
+                    label="Process Receiving"
+                    wire:click="processReceiving"
+                    class="btn-primary" />
             </x-slot:actions>
         @endif
-    </x-mary-modal>
+
+    </x-mary-drawer>
 
     {{-- View Purchase Order Details Modal --}}
     <x-mary-modal wire:model="showDetailsModal" title="Purchase Order Details"

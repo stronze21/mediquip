@@ -23,7 +23,7 @@
     <x-banner />
 
     {{-- Top Navigation --}}
-    <x-mary-nav sticky>
+    <x-mary-nav sticky fullWidth>
         {{-- Left side - Breadcrumbs or title --}}
 
         <x-slot:brand>
@@ -112,10 +112,10 @@
 
 
     {{-- Use MaryUI Main Layout --}}
-    <x-mary-main with-nav>
+    <x-mary-main with-nav fullWidth>
 
         {{-- Sidebar --}}
-        <x-slot:sidebar drawer="main-drawer" collapsible class="bg-base-200 lg:bg-inherit">
+        <x-slot:sidebar drawer="main-drawer" collapsible class="ps-4 bg-base-200 lg:bg-inherit">
             {{-- User Info --}}
             <x-mary-list-item :item="auth()->user()" value="name" sub-value="email" no-separator no-hover
                 class="-mx-2 !-my-2 rounded">

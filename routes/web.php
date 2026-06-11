@@ -1,36 +1,37 @@
 <?php
 
-use App\Models\Product;
-use App\Livewire\Dashboard;
 use App\Exports\ProductsExport;
-use App\Livewire\Admin\UserManual;
-use App\Livewire\Sales\PointOfSale;
-use App\Livewire\Sales\SalesHistory;
-use App\Livewire\Sales\PaymentManagement;
-use Maatwebsite\Excel\Facades\Excel;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\InvoiceController; // Add this import
+use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\StatementOfAccountController;
+use App\Livewire\Admin\RecomputeManagement;
 use App\Livewire\Admin\UserManagement;
-use App\Livewire\Reports\SalesReports;
-use App\Livewire\Inventory\StockLevels;
+use App\Livewire\Admin\UserManual;
 use App\Livewire\Admin\WarrantyTracking;
-use App\Livewire\Reports\CustomerReports;
-use App\Livewire\Sales\ReturnsManagement;
+use App\Livewire\Dashboard;
+use App\Livewire\Inventory\CategoryManagement;
+use App\Livewire\Inventory\InventoryLocationManagement;
 use App\Livewire\Inventory\LowStockAlerts;
+use App\Livewire\Inventory\ProductManagement;
+use App\Livewire\Inventory\StockAdjustments;
+use App\Livewire\Inventory\StockLevels;
 use App\Livewire\Inventory\StockMovements;
+use App\Livewire\Inventory\WarehouseManagement;
+use App\Livewire\Purchasing\PurchaseOrderManagement;
+use App\Livewire\Purchasing\PurchaseOrderPrint;
+use App\Livewire\Purchasing\SupplierManagement;
+use App\Livewire\Reports\CustomerReports;
 use App\Livewire\Reports\FinancialReports;
 use App\Livewire\Reports\InventoryReports;
+use App\Livewire\Reports\SalesReports;
 use App\Livewire\Sales\CustomerManagement;
-use App\Http\Controllers\ReportsController;
-use App\Livewire\Admin\RecomputeManagement;
-use App\Livewire\Inventory\StockAdjustments;
-use App\Livewire\Inventory\ProductManagement;
-use App\Livewire\Inventory\CategoryManagement;
-use App\Livewire\Inventory\WarehouseManagement;
-use App\Livewire\Purchasing\SupplierManagement;
-use App\Livewire\Purchasing\PurchaseOrderManagement;
-use App\Livewire\Inventory\InventoryLocationManagement;
-use App\Http\Controllers\InvoiceController; // Add this import
-use App\Http\Controllers\StatementOfAccountController;
+use App\Livewire\Sales\PaymentManagement;
+use App\Livewire\Sales\PointOfSale;
+use App\Livewire\Sales\ReturnsManagement;
+use App\Livewire\Sales\SalesHistory;
+use App\Models\Product;
+use Illuminate\Support\Facades\Route;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 
@@ -129,6 +130,10 @@ Route::middleware([
     Route::middleware(['permission:manage_inventory'])->prefix('purchasing')->name('purchasing.')->group(function () {
         Route::get('/purchase-orders', PurchaseOrderManagement::class)->name('purchase-orders');
         Route::get('/suppliers', SupplierManagement::class)->name('suppliers');
+        Route::get(
+            '/purchase-orders/{purchaseOrder}/print',
+            PurchaseOrderPrint::class
+        )->name('purchase-orders.print');
     });
 
     // Quick Access Routes - Based on permissions

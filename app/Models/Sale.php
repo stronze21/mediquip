@@ -100,7 +100,8 @@ class Sale extends Model
             'vat_12' => 'VAT (12% inclusive)',
             'ewt_sales_1' => 'EWT (1% on sales, net of VAT)',
             'ewt_service_2' => 'EWT (2% on services, net of VAT)',
-            default => 'Tax',
+            'mixed' => 'Mixed Tax',
+            default => 'Non-VAT',
         };
     }
 
