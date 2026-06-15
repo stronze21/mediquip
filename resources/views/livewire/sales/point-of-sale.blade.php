@@ -493,7 +493,7 @@
             <x-mary-stat title="Completed" value="{{ \App\Models\Sale::where('status', 'completed')->count() }}"
                 icon="o-check-circle" color="text-success" />
             <x-mary-stat title="Outstanding"
-                value="&#8369;{{ number_format(\App\Models\Sale::whereIn('payment_status', ['unpaid', 'partial'])->sum(\DB::raw('total_amount - paid_amount')), 2) }}"
+                value="₱{{ number_format(\App\Models\Sale::whereIn('payment_status', ['unpaid', 'partial'])->sum(\DB::raw('total_amount - paid_amount')), 2) }}"
                 icon="o-banknotes" color="text-info" />
         </div>
 
