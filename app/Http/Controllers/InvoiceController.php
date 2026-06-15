@@ -37,6 +37,7 @@ class InvoiceController extends Controller
             // Set additional options
             $pdf->setOptions([
                 'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
                 'isPhpEnabled' => true,
                 'defaultFont' => 'Arial'
             ]);

@@ -8,66 +8,123 @@
 
     <div data-invoice-page></div>
 
-    <x-mary-header title="Invoice" subtitle="Create client-specific invoices with editable line pricing" separator />
+    <x-mary-header title="Sales Invoices" subtitle="Create invoice drafts and process customer payments" separator>
+        @unless ($showInvoiceForm)
+            <x-slot:middle class="!justify-end">
+                <x-mary-input placeholder="Search invoices..." wire:model.live.debounce="invoiceSearch" clearable
+                    icon="o-magnifying-glass" />
+            </x-slot:middle>
+        @endunless
+        <x-slot:actions>
+            @if ($showInvoiceForm)
+                <x-mary-button icon="o-arrow-left" wire:click="closeInvoiceForm" class="btn-ghost">
+                    Back to Invoices
+                </x-mary-button>
+            @else
+                <x-mary-button icon="o-plus" wire:click="openInvoiceForm" class="btn-primary">
+                    Create Invoice
+                </x-mary-button>
+            @endif
+        </x-slot:actions>
+    </x-mary-header>
 
-    <div class="grid grid-cols-1 gap-2 xl:grid-cols-12">
-        {{-- Left Panel - Product Search & Cart --}}
-        <div class="space-y-4 xl:col-span-7 2xl:col-span-8">
+    @if ($showInvoiceForm)
+    <x-mary-card class="mb-4">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+                <h2 class="text-2xl font-bold">
+                    {{ $editingInvoiceId ? 'Edit Invoice Draft' : 'Create Invoice Draft' }}
+                </h2>
+                <p class="text-sm text-gray-500">
+                    Save an invoice as a draft while preparing it, or process it when payment details are ready.
+                </p>
+            </div>
+            <x-mary-badge value="Invoice Workflow" class="badge-warning" />
+        </div>
+    </x-mary-card>
 
-            {{-- Product Search --}}
-            <x-mary-card title="Invoice Items">
-                @if ($invoiceType === 'sales')
-                    <div class="space-y-4">
-                        {{-- Search Input --}}
-                        <div class="flex gap-2">
-                            <div class="flex-1">
-                                <x-mary-input placeholder="Search by name, SKU, or barcode..."
-                                    wire:model.live.debounce="searchProduct" icon="o-magnifying-glass" />
-                            </div>
-                            <x-mary-button icon="o-qr-code" wire:click="openBarcodeModal" class="btn-secondary"
-                                tooltip="Barcode Scanner" />
+    <div class="space-y-6">
+        <x-mary-card>
+            <div class="space-y-6">
+                {{-- Customer & Invoice Information --}}
+                <div>
+                    <h3 class="mb-3 text-lg font-semibold">Customer & Invoice Information</h3>
+                    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <x-mary-select label="Invoice Type" :options="[
+                            ['value' => 'sales', 'label' => 'Sales Invoice'],
+                            ['value' => 'service', 'label' => 'Service Invoice'],
+                        ]" wire:model.live="invoiceType" option-label="label" option-value="value" />
+
+                        <x-mary-select label="Warehouse *" :options="$warehouses" wire:model="selectedWarehouse"
+                            option-value="id" option-label="name" placeholder="Select warehouse" />
+
+                        <x-mary-select label="Customer" :options="$customers" wire:model.live="selectedCustomer"
+                            option-value="id" option-label="name" placeholder="Select customer" />
+
+                        <div class="flex items-end gap-2">
+                            <x-mary-button label="New Customer" icon="o-user-plus" wire:click="openCustomerModal"
+                                class="btn-primary" />
                         </div>
+                    </div>
+                </div>
 
-                        {{-- Product Search Results --}}
-                        @if (count($searchResults) > 0)
-                            <div class="mt-4">
-                                <h5 class="mb-2 font-medium text-base-700">Search Results:</h5>
-                                <div class="overflow-y-auto border rounded-lg shadow-sm bg-base h-60">
-                                    <div class="space-y-0">
-                                        @foreach ($searchResults as $product)
-                                            <div
-                                                class="flex items-center justify-between p-3 transition-colors border-b last:border-b-0 hover:bg-base-50">
-                                                <div class="flex-1 min-w-0">
-                                                    <div class="font-medium truncate">{{ $product['name'] }}</div>
-                                                    <div class="text-sm truncate text-base-500">{{ $product['sku'] }} |
-                                                        &#8369;{{ number_format($product['selling_price'], 2) }}</div>
-                                                    @php
-                                                        $stock = $product['inventory'][0]['quantity_available'] ?? 0;
-                                                    @endphp
-                                                    <div
-                                                        class="text-sm {{ $stock <= 0 ? 'text-red-500 font-semibold' : 'text-base-500' }}">
-                                                        Stock: {{ $stock }}
-                                                        @if ($stock <= 0)
-                                                            <span class="ml-1 text-xs">(Out of Stock)</span>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                                <div class="flex flex-shrink-0 gap-2">
-                                                    <x-mary-button icon="o-plus"
-                                                        wire:click="addToCart({{ $product['id'] }})"
-                                                        class="btn-xs btn-primary" :disabled="$stock <= 0"
-                                                        title="Add with default price" />
-                                                    <x-mary-button icon="o-currency-dollar"
-                                                        wire:click="addToCartWithPriceSelection({{ $product['id'] }})"
-                                                        class="btn-xs btn-secondary" :disabled="$stock <= 0"
-                                                        title="Add with price selection" />
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
+                {{-- Customer Details --}}
+                <div>
+                    <h3 class="mb-3 text-lg font-semibold">Customer Details</h3>
+                    @if ($selectedCustomer)
+                        @php $customer = \App\Models\Customer::find($selectedCustomer) @endphp
+                        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div class="p-4 rounded-lg bg-base-200">
+                                <div class="text-xs text-gray-500">Customer</div>
+                                <div class="font-semibold">{{ $customer?->name }}</div>
                             </div>
-                        @endif
+                            <div class="p-4 rounded-lg bg-base-200">
+                                <div class="text-xs text-gray-500">Email</div>
+                                <div class="font-semibold">{{ $customer?->email ?: 'Not set' }}</div>
+                            </div>
+                            <div class="p-4 rounded-lg bg-base-200">
+                                <div class="text-xs text-gray-500">Phone</div>
+                                <div class="font-semibold">{{ $customer?->phone ?: 'Not set' }}</div>
+                            </div>
+                            <div class="p-4 rounded-lg bg-base-200">
+                                <div class="text-xs text-gray-500">Tax ID</div>
+                                <div class="font-semibold">{{ $customer?->tax_id ?: 'Not set' }}</div>
+                            </div>
+                            <div class="p-4 rounded-lg md:col-span-2 bg-base-200">
+                                <div class="text-xs text-gray-500">Address</div>
+                                <div class="font-semibold">{{ $customer?->address ?: 'Not set' }}</div>
+                            </div>
+                        </div>
+                    @else
+                        <div class="p-4 rounded-lg bg-base-200">
+                            <div class="text-sm text-gray-500">
+                                No customer selected. Select an existing customer or create a new customer before saving or processing this invoice.
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
+                <x-mary-textarea label="Invoice Notes" wire:model="saleNotes"
+                    placeholder="Additional notes for this invoice" />
+
+            </div>
+        </x-mary-card>
+
+        {{-- Left Panel - Invoice Line Entry --}}
+        <div class="space-y-6">
+
+            {{-- Line Entry --}}
+            <x-mary-card title="Add Invoice Lines" class="{{ $invoiceType === 'sales' ? 'hidden' : '' }}">
+                @if ($invoiceType === 'sales')
+                    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <div class="font-medium">Product line pricing</div>
+                            <p class="text-sm text-base-content/60">
+                                Add an item row, choose the product, then enter the agreed unit price for this client.
+                            </p>
+                        </div>
+                        <x-mary-button label="Add Item" icon="o-plus" wire:click="addInvoiceItem"
+                            class="btn-primary" />
                     </div>
                 @endif
 
@@ -111,15 +168,21 @@
                     @endif
                 @endif
             </x-mary-card>
-            {{-- Shopping Cart --}}
+            {{-- Invoice Line Items --}}
             <x-mary-card>
-                {{-- Invoice Cart Header with Bulk Actions --}}
+                {{-- Invoice Items Header with Bulk Actions --}}
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-semibold">Invoice Cart ({{ count($cartItems) }} items)</h3>
-                    @if (count($cartItems) > 0)
-                        <x-mary-button icon="o-currency-dollar" wire:click="openBulkPriceSelection"
-                            class="btn-xs btn-outline" label="Bulk Price" />
-                    @endif
+                    <h3 class="text-lg font-semibold">Invoice Items ({{ $this->invoiceLineCount() }} items)</h3>
+                    <div class="flex gap-2">
+                        @if ($invoiceType === 'sales')
+                            <x-mary-button icon="o-plus" wire:click="addInvoiceItem" class="btn-sm btn-primary"
+                                label="Add Item" />
+                        @endif
+                        @if ($this->hasSelectedInvoiceProductLines())
+                            <x-mary-button icon="o-currency-dollar" wire:click="openBulkPriceSelection"
+                                class="btn-sm btn-outline" label="Bulk Price" />
+                        @endif
+                    </div>
                 </div>{{-- Add this before the cart items section --}}
                 @if ($this->hasSerialTrackingItems() && !$selectedCustomer)
                     <div class="p-3 mb-4 border rounded-lg bg-warning/10 border-warning/20">
@@ -151,37 +214,46 @@
                                     @foreach ($cartItems as $cartKey => $item)
                                         <tr>
                                             <td class="min-w-96">
-                                                <div class="flex items-start gap-2">
-                                                    @if ($item['item_type'] === 'service')
+                                                @if ($item['item_type'] === 'service')
+                                                    <div class="flex items-start gap-2">
                                                         <x-mary-icon name="o-wrench-screwdriver" class="w-4 h-4 mt-1 text-primary" />
-                                                    @else
-                                                        <x-mary-icon name="o-cube" class="w-4 h-4 mt-1 text-secondary" />
-                                                    @endif
-                                                    <div>
-                                                        <div class="font-medium">{{ $item['name'] }}</div>
-                                                        <div class="text-sm text-base-500">{{ $item['code'] }}</div>
-
-                                                        @if ($item['item_type'] === 'product' && isset($item['available_stock']))
-                                                            <div class="text-xs text-base-400">Stock: {{ $item['available_stock'] }}</div>
-                                                        @endif
-
-                                                        @if ($item['item_type'] === 'product' && isset($item['track_serial']) && $item['track_serial'])
-                                                            @php
-                                                                $serialCount = count($item['serial_numbers'] ?? []);
-                                                                $required = $item['quantity'];
-                                                            @endphp
-                                                            <div class="mt-1 text-xs">
-                                                                @if ($serialCount === $required)
-                                                                    <span class="text-success">{{ $serialCount }}/{{ $required }} serials</span>
-                                                                @elseif(!$selectedCustomer)
-                                                                    <span class="text-error">Customer required for serials</span>
-                                                                @else
-                                                                    <span class="text-warning">{{ $serialCount }}/{{ $required }} serials</span>
-                                                                @endif
-                                                            </div>
-                                                        @endif
+                                                        <div>
+                                                            <div class="font-medium">{{ $item['name'] }}</div>
+                                                            <div class="text-sm text-base-500">{{ $item['code'] }}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                @else
+                                                    <x-mary-choices-offline :options="$products"
+                                                        wire:model.live="cartItems.{{ $cartKey }}.product_id"
+                                                        wire:change="selectInvoiceProduct('{{ $cartKey }}', $event.target.value)"
+                                                        option-value="id" option-label="name"
+                                                        placeholder="Select product" single clearable searchable />
+
+                                                    @if (!empty($item['product_id']))
+                                                        <div class="mt-1 text-xs text-base-400">
+                                                            SKU: {{ $item['code'] ?: '-' }}
+                                                            @if (isset($item['available_stock']))
+                                                                <span class="ml-2">Stock: {{ $item['available_stock'] }}</span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+
+                                                    @if (isset($item['track_serial']) && $item['track_serial'])
+                                                        @php
+                                                            $serialCount = count($item['serial_numbers'] ?? []);
+                                                            $required = $item['quantity'];
+                                                        @endphp
+                                                        <div class="mt-1 text-xs">
+                                                            @if ($serialCount === $required)
+                                                                <span class="text-success">{{ $serialCount }}/{{ $required }} serials</span>
+                                                            @elseif(!$selectedCustomer)
+                                                                <span class="text-error">Customer required</span>
+                                                            @else
+                                                                <span class="text-warning">{{ $serialCount }}/{{ $required }} serials</span>
+                                                            @endif
+                                                        </div>
+                                                    @endif
+                                                @endif
                                             </td>
                                             <td class="min-w-36">
                                                 <div class="flex items-center gap-1">
@@ -192,7 +264,7 @@
                                                         class="w-16 text-center input-xs" />
                                                     <x-mary-button icon="o-plus"
                                                         wire:click="increaseQuantity('{{ $cartKey }}')" class="btn-xs btn-ghost"
-                                                        :disabled="$item['item_type'] === 'product' && $item['quantity'] >= ($item['available_stock'] ?? 0)" />
+                                                        :disabled="$item['item_type'] === 'product' && isset($item['available_stock']) && $item['available_stock'] !== null && $item['quantity'] >= $item['available_stock']" />
                                                 </div>
                                             </td>
                                             <td class="min-w-72">
@@ -206,7 +278,7 @@
                                                     <x-mary-input wire:model.blur="cartItems.{{ $cartKey }}.price"
                                                         wire:change="updatePrice('{{ $cartKey }}', $event.target.value)"
                                                         type="number" step="0.01" min="0" class="text-right input-xs" />
-                                                    @if ($item['item_type'] === 'product')
+                                                    @if ($item['item_type'] === 'product' && !empty($item['product_id']))
                                                         <x-mary-button icon="o-ellipsis-vertical"
                                                             wire:click="openPriceSelection('{{ $cartKey }}')"
                                                             class="btn-xs btn-ghost" title="Select preset price" />
@@ -236,6 +308,24 @@
                                         </tr>
                                     @endforeach
                                 </tbody>
+                                <tfoot>
+                                    @php $billing = $this->calculateBilling(); @endphp
+                                    <tr>
+                                        <td colspan="4" class="text-right">{{ $this->subtotalLabel() }}</td>
+                                        <td class="font-medium text-right">&#8369;{{ number_format($this->displaySubtotalAmount(), 2) }}</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr>
+                                        <td colspan="4" class="text-right">{{ $this->taxLabel($billing['tax_type']) }}:</td>
+                                        <td class="font-medium text-right">&#8369;{{ number_format($taxAmount, 2) }}</td>
+                                        <td></td>
+                                    </tr>
+                                    <tr class="font-bold">
+                                        <td colspan="4" class="text-right">Total Amount:</td>
+                                        <td class="text-right">&#8369;{{ number_format($totalAmount, 2) }}</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
 
@@ -271,7 +361,7 @@
                                             <span class="text-success">ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ {{ $serialCount }}/{{ $required }}
                                                 serials</span>
                                         @elseif(!$selectedCustomer)
-                                            <span class="text-error">ÃƒÂ¢Ã…Â¡Ã‚Â  Customer required for serials</span>
+                                            <Customer required</span>
                                         @else
                                             <span class="text-warning">ÃƒÂ¢Ã…Â¡Ã‚Â  {{ $serialCount }}/{{ $required }}
                                                 serials</span>
@@ -338,135 +428,148 @@
                         @endforeach
                         @endif
 
-                        {{-- Cart Actions --}}
+                        {{-- Invoice Actions --}}
                         <div class="flex gap-2 pt-4 border-t">
-                            <x-mary-button label="Clear Cart" wire:click="clearCart" class="btn-ghost btn-sm"
-                                />
-                            <x-mary-button label="Hold Invoice" wire:click="openHoldSaleModal"
-                                class="btn-warning btn-sm" />
-                            <x-mary-button label="Held Invoices" wire:click="openHeldSalesModal" class="btn-info btn-sm"
-                                />
+                            <x-mary-button label="Clear Items" wire:click="clearCart" class="btn-ghost btn-sm" />
+                            <x-mary-button label="Save Draft" wire:click="saveInvoiceDraft"
+                                class="btn-outline btn-sm" :disabled="!$selectedCustomer || $this->hasIncompleteInvoiceProductLines()" />
                         </div>
                     </div>
                 @else
                     <div class="py-8 text-center">
                         <x-heroicon-o-shopping-cart class="w-12 h-12 mx-auto text-base-400" />
-                        <p class="mt-2 text-base-500">Cart is empty</p>
+                        <p class="mt-2 text-base-500">No invoice items yet</p>
                         <p class="text-sm text-base-400">
-                            Search for products or services to add to cart
+                            Add a line, select the product, then enter the client-specific price.
                         </p>
-                        <x-mary-button label="Held Invoices" wire:click="openHeldSalesModal" class="btn-info btn-sm"
-                            />
-                    </div>
-                @endif
-            </x-mary-card>
-        </div>
-
-        {{-- Right Panel - Customer & Checkout --}}
-        <div class="space-y-2 xl:col-span-5 2xl:col-span-4">
-
-            <x-mary-card title="{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}">
-                <div class="grid grid-cols-1 md:grid-cols-2">
-                    <x-mary-select label="Invoice Type" :options="[
-                        ['value' => 'sales', 'label' => 'Sales Invoice'],
-                        ['value' => 'service', 'label' => 'Service Invoice'],
-                    ]" wire:model.live="invoiceType" option-label="label" option-value="value" />
-                </div>
-            </x-mary-card>
-
-            {{-- Customer Selection --}}
-            <x-mary-card title="Customer">
-                @if ($this->hasSerialTrackingItems())
-                    <div class="p-2 mb-3 text-xs border rounded bg-info/10 border-info/20 text-info">
-                        <x-heroicon-o-information-circle class="inline w-4 h-4 mr-1" />
-                        Customer selection required for serial tracking
-                    </div>
-                @endif
-
-                @if ($selectedCustomer)
-                    @php $customer = \App\Models\Customer::find($selectedCustomer) @endphp
-                    <div class="space-y-2">
-                        <div class="flex items-center justify-between">
-                            <div>
-                                <div class="font-medium">{{ $customer->name }}</div>
-                                @if ($customer->email)
-                                    <div class="text-sm text-base-500">{{ $customer->email }}</div>
-                                @endif
-                                @if ($customer->phone)
-                                    <div class="text-sm text-base-500">{{ $customer->phone }}</div>
-                                @endif
-                            </div>
-                            <x-mary-button icon="o-x-mark" wire:click="$set('selectedCustomer', null)"
-                                class="btn-xs btn-ghost" />
-                        </div>
-                    </div>
-                @else
-                    <div class="space-y-2">
-                        <x-mary-button label="Search Customer" wire:click="openSearchCustomerModal"
-                            class="w-full btn-outline" />
-                        <x-mary-button label="New Customer" wire:click="openCustomerModal" class="w-full btn-primary"
-                            />
-                        <x-mary-button label="Walk-in Customer" wire:click="selectWalkInCustomer"
-                            class="w-full btn-ghost" :disabled="$this->hasSerialTrackingItems()" />
-                    </div>
-                @endif
-            </x-mary-card>
-
-            {{-- Order Summary --}}
-            <x-mary-card title="Order Summary">
-                <div class="space-y-3">
-                    <div class="flex justify-between">
-                        <span>Invoice Type:</span>
-                        <span class="font-medium">{{ $invoiceType === 'service' ? 'Service Invoice' : 'Sales Invoice' }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>{{ $this->subtotalLabel() }}</span>
-                        <span class="font-medium">&#8369;{{ number_format($this->displaySubtotalAmount(), 2) }}</span>
-                    </div>
-
-                    @if ($discountAmount > 0)
-                        <div class="flex justify-between text-success">
-                            <span>Discount:</span>
-                            <span class="font-medium">-&#8369;{{ number_format($discountAmount, 2) }}</span>
-                        </div>
-                    @endif
-
-                    <div class="flex justify-between">
-                        <span>{{ $this->taxLabel() }}:</span>
-                        <span class="font-medium">&#8369;{{ number_format($taxAmount, 2) }}</span>
-                    </div>
-
-                    <div class="flex justify-between pt-3 text-xl font-bold border-t">
-                        <span>Total:</span>
-                        <span>&#8369;{{ number_format($totalAmount, 2) }}</span>
-                    </div>
-
-                    <div class="space-y-2">
-                        <x-mary-button label="Apply Discount" wire:click="openDiscountModal"
-                            class="w-full btn-warning btn-sm" />
-                        @if ($discountAmount > 0)
-                            <x-mary-button label="Remove Discount" wire:click="removeDiscount"
-                                class="w-full btn-ghost btn-sm" />
+                        @if ($invoiceType === 'sales')
+                            <x-mary-button label="Add First Item" icon="o-plus" wire:click="addInvoiceItem"
+                                class="mt-4 btn-primary" />
                         @endif
                     </div>
-                </div>
+                @endif
             </x-mary-card>
+        </div>
 
-            {{-- Checkout Button --}}
-            @php
-                $canCheckout = count($cartItems) > 0 && $this->validateCustomerForSerials();
-            @endphp
+    </div>
 
-            <x-mary-button label="Process Payment" wire:click="openPaymentModal" class="w-full btn-primary btn-lg"
-                :disabled="!$canCheckout" />
+    @php
+        $canCheckout = $this->invoiceLineCount() > 0 && !$this->hasIncompleteInvoiceProductLines() && $this->validateCustomerForSerials();
+    @endphp
 
-            @if (!$this->validateCustomerForSerials())
-                <p class="mt-1 text-xs text-center text-error">
-                    Customer required for serial tracking items
+    <div class="sticky bottom-0 z-10 p-4 mt-6 border rounded-lg bg-base-100/95 backdrop-blur">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
+            @if (!$selectedCustomer)
+                <p class="text-xs text-error md:mr-auto">
+                    Customer is required before saving or processing this invoice.
                 </p>
             @endif
+            <x-mary-button label="Cancel" wire:click="closeInvoiceForm" class="btn-ghost" />
+            <x-mary-button label="Save Draft" wire:click="saveInvoiceDraft" class="btn-outline"
+                :disabled="!$selectedCustomer || $this->hasIncompleteInvoiceProductLines()" />
+            <x-mary-button label="Process Invoice" wire:click="openPaymentModal" class="btn-primary"
+                :disabled="!$canCheckout" />
         </div>
     </div>
+
+    @else
+        <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-5">
+            <x-mary-select placeholder="All Customers" :options="$filterOptions['customers']"
+                wire:model.live="customerFilter" option-value="value" option-label="label" />
+            <x-mary-select placeholder="All Status" :options="$filterOptions['statuses']"
+                wire:model.live="invoiceStatusFilter" option-value="value" option-label="label" />
+            <x-mary-select placeholder="All Types" :options="$filterOptions['types']"
+                wire:model.live="invoiceTypeFilter" option-value="value" option-label="label" />
+            <x-mary-select placeholder="All Dates" :options="$filterOptions['dates']"
+                wire:model.live="invoiceDateFilter" option-value="value" option-label="label" />
+            <x-mary-button label="Clear Filters" wire:click="clearInvoiceFilters" class="btn-outline" />
+        </div>
+
+        <div class="grid grid-cols-1 gap-4 mb-6 md:grid-cols-4">
+            <x-mary-stat title="Total Invoices" value="{{ \App\Models\Sale::count() }}" icon="o-document-text"
+                color="text-primary" />
+            <x-mary-stat title="Drafts" value="{{ \App\Models\Sale::where('status', 'draft')->count() }}"
+                icon="o-pencil-square" color="text-warning" />
+            <x-mary-stat title="Completed" value="{{ \App\Models\Sale::where('status', 'completed')->count() }}"
+                icon="o-check-circle" color="text-success" />
+            <x-mary-stat title="Outstanding"
+                value="&#8369;{{ number_format(\App\Models\Sale::whereIn('payment_status', ['unpaid', 'partial'])->sum(\DB::raw('total_amount - paid_amount')), 2) }}"
+                icon="o-banknotes" color="text-info" />
+        </div>
+
+        <x-mary-card>
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr>
+                            <th>Invoice</th>
+                            <th>Customer</th>
+                            <th>Type</th>
+                            <th>Warehouse</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($invoices as $invoice)
+                            <tr>
+                                <td class="font-semibold">{{ $invoice->invoice_number }}</td>
+                                <td>{{ $this->customerDisplayName($invoice->customer) }}</td>
+                                <td>{{ $invoice->invoice_type === 'service' ? 'Service' : 'Sales' }}</td>
+                                <td>{{ $invoice->warehouse?->name ?? '-' }}</td>
+                                <td>{{ $invoice->items->count() }}</td>
+                                <td class="font-bold">&#8369;{{ number_format($invoice->total_amount, 2) }}</td>
+                                <td>
+                                    <x-mary-badge value="{{ $invoice->payment_status_label }}"
+                                        class="badge-{{ $invoice->is_paid ? 'success' : ($invoice->payment_status === 'partial' ? 'warning' : 'error') }}" />
+                                </td>
+                                <td>
+                                    <x-mary-badge value="{{ ucfirst($invoice->status) }}"
+                                        class="badge-{{ $invoice->status === 'completed' ? 'success' : ($invoice->status === 'draft' ? 'warning' : 'neutral') }}" />
+                                </td>
+                                <td>{{ $invoice->created_at->format('M d, Y') }}</td>
+                                <td>
+                                    <div class="flex gap-1">
+                                        @if ($invoice->status === 'draft')
+                                            <x-mary-button icon="o-pencil" wire:click="editInvoice({{ $invoice->id }})"
+                                                class="btn-xs btn-ghost" tooltip="Edit draft" />
+                                            <x-mary-button icon="o-credit-card"
+                                                wire:click="processInvoice({{ $invoice->id }})"
+                                                class="btn-xs btn-primary" tooltip="Process invoice" />
+                                        @else
+                                            <a href="{{ route('invoice.preview', $invoice) }}" target="_blank"
+                                                class="btn btn-xs btn-ghost" title="Preview invoice">
+                                                <x-mary-icon name="o-eye" class="w-4 h-4" />
+                                            </a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="10" class="py-8 text-center">
+                                    <div class="flex flex-col items-center">
+                                        <x-heroicon-o-document-text class="w-12 h-12 mb-2 text-gray-400" />
+                                        <p class="text-gray-500">No invoices found</p>
+                                        <x-mary-button label="Create First Invoice" wire:click="openInvoiceForm"
+                                            class="mt-4 btn-primary" />
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </x-mary-card>
+
+        <div class="mt-6">
+            {{ $invoices->links() }}
+        </div>
+    @endif
 
     {{-- Individual Price Selection Modal --}}
     <x-mary-modal wire:model="showPriceModal" title="Select Price" class="backdrop-blur">
@@ -535,11 +638,11 @@
     </x-mary-modal>
     {{-- Payment Modal --}}
     {{-- Enhanced Payment Modal with Additional Change Features --}}
-    <x-mary-modal wire:model="showPaymentModal" title="Process Payment" subtitle="Complete the invoice transaction">
+    <x-mary-modal wire:model="showPaymentModal" title="Process Invoice Payment" subtitle="Complete the invoice transaction">
         <div class="space-y-4">
-            {{-- Order Summary --}}
+            {{-- Invoice Summary --}}
             <div class="p-4 rounded-lg bg-base-200">
-                <h4 class="mb-3 font-semibold">Order Summary</h4>
+                <h4 class="mb-3 font-semibold">Invoice Summary</h4>
                 <div class="space-y-2 text-sm">
                     <div class="flex justify-between">
                         <span>Invoice Type:</span>
@@ -549,12 +652,6 @@
                         <span>{{ $this->subtotalLabel() }}</span>
                         <span>&#8369;{{ number_format($this->displaySubtotalAmount(), 2) }}</span>
                     </div>
-                    @if ($discountAmount > 0)
-                        <div class="flex justify-between text-success">
-                            <span>Discount:</span>
-                            <span>-&#8369;{{ number_format($discountAmount, 2) }}</span>
-                        </div>
-                    @endif
                     <div class="flex justify-between">
                         <span>{{ $this->taxLabel() }}:</span>
                         <span>&#8369;{{ number_format($taxAmount, 2) }}</span>
@@ -654,8 +751,8 @@
                 </div>
             @endif
 
-            {{-- Sale Notes --}}
-            <x-mary-textarea label="Sale Notes (Optional)" wire:model="saleNotes"
+            {{-- Invoice Notes --}}
+            <x-mary-textarea label="Invoice Notes (Optional)" wire:model="saleNotes"
                 placeholder="Any additional notes..." rows="2" />
         </div>
 
@@ -668,7 +765,7 @@
 
     {{-- Barcode Scanner Modal --}}
     <x-mary-modal wire:model="showBarcodeModal" title="Barcode Scanner"
-        subtitle="Scan multiple items then add to cart" box-class="w-11/12 max-w-4xl">
+        subtitle="Scan multiple items then add to the invoice" box-class="w-11/12 max-w-4xl">
         <div class="space-y-4">
             {{-- Barcode Input --}}
             <div class="p-4 rounded-lg bg-primary/10">
@@ -736,10 +833,10 @@
                 </div>
             @endif
 
-            {{-- Current Cart Summary --}}
+            {{-- Current Invoice Summary --}}
             <div class="p-3 border rounded-lg bg-primary/5 border-primary/20">
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-primary-700">Current Cart</span>
+                    <span class="text-sm font-medium text-primary-700">Current Invoice</span>
                     <span class="text-xs text-primary-600">{{ count($cartItems) }} items</span>
                 </div>
                 @if (count($cartItems) > 0)
@@ -757,12 +854,12 @@
                     </div>
                     <div class="pt-2 mt-2 border-t border-primary/20">
                         <div class="flex justify-between text-sm font-semibold text-primary-800">
-                            <span>Cart Total:</span>
+                            <span>Invoice Total:</span>
                             <span>&#8369;{{ number_format($totalAmount, 2) }}</span>
                         </div>
                     </div>
                 @else
-                    <div class="py-2 text-xs text-center text-primary-600">Cart is empty</div>
+                    <div class="py-2 text-xs text-center text-primary-600">Invoice has no items yet</div>
                 @endif
             </div>
         </div>
@@ -770,7 +867,7 @@
         <x-slot:actions>
             <x-mary-button label="Cancel" wire:click="$set('showBarcodeModal', false)" class="btn-ghost" />
             <x-mary-button label="Clear All" wire:click="clearScannedItems" class="btn-outline" />
-            <x-mary-button label="Add to Cart ({{ count($scannedItems) }})" wire:click="addScannedItemsToCart"
+            <x-mary-button label="Add to Invoice ({{ count($scannedItems) }})" wire:click="addScannedItemsToCart"
                 class="btn-primary" :disabled="count($scannedItems) === 0" />
         </x-slot:actions>
     </x-mary-modal>
@@ -825,74 +922,6 @@
             <x-mary-button label="Create Customer" wire:click="createCustomer" class="btn-primary" />
         </x-slot:actions>
     </x-mary-modal>
-
-    {{-- Enhanced Discount Modal (your existing structure with small additions) --}}
-    <x-mary-modal wire:model="showDiscountModal" title="Apply Discount" subtitle="Add discount to the order">
-        <div class="space-y-4">
-            {{-- Show current subtotal --}}
-            <div class="p-3 rounded-lg bg-base-200">
-                <div class="flex justify-between text-sm">
-                    <span>Current Subtotal:</span>
-                    <span class="font-semibold">&#8369;{{ number_format($subtotal, 2) }}</span>
-                </div>
-            </div>
-
-            {{-- Show current discount if any --}}
-            @if ($discountAmount > 0)
-                <div class="p-3 border rounded-lg bg-warning/10 border-warning/20">
-                    <div class="text-sm">
-                        <div class="flex justify-between">
-                            <span>Current Discount:</span>
-                            <span class="font-semibold">
-                                {{ $this->discountLabel() }}
-                                = -&#8369;{{ number_format($discountAmount, 2) }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            @endif
-
-            <x-mary-select label="Discount Type" :options="[
-                ['id' => 'senior', 'name' => 'Senior Citizen Discount (20%)'],
-                ['id' => 'pwd', 'name' => 'PWD Discount (20%)'],
-                ['id' => 'percentage', 'name' => 'Percentage (%)'],
-                ['id' => 'fixed', 'name' => 'Fixed Amount (ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â±)'],
-            ]" wire:model.live="discountType" />
-
-            <x-mary-input label="Discount Value" wire:model.live="discountValue" type="number" step="0.01"
-                placeholder="{{ in_array($discountType, ['percentage', 'senior', 'pwd'], true) ? 'Enter percentage (e.g., 10)' : 'Enter amount (e.g., 100.00)' }}"
-                :disabled="in_array($discountType, ['senior', 'pwd'], true)" />
-
-            @if (in_array($discountType, ['senior', 'pwd'], true) || ($discountValue && is_numeric($discountValue)))
-                <div class="p-3 rounded-lg bg-info/10">
-                    <div class="text-center">
-                        <div class="text-lg font-bold text-info">
-                            Preview:
-                            -&#8369;{{ number_format($this->calculateDiscountAmount(), 2) }}
-                        </div>
-                    </div>
-                </div>
-
-                {{-- Validation warnings --}}
-                @if ($discountType === 'percentage' && $discountValue > 100)
-                    <div class="text-sm text-error">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Percentage cannot exceed 100%</div>
-                @endif
-                @if ($discountType === 'fixed' && $discountValue > $subtotal)
-                    <div class="text-sm text-warning">ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Fixed discount will be limited to subtotal amount</div>
-                @endif
-            @endif
-        </div>
-
-        <x-slot:actions>
-            <x-mary-button label="Cancel" wire:click="$set('showDiscountModal', false)" />
-            @if ($discountAmount > 0)
-                <x-mary-button label="Remove Current" wire:click="removeDiscount" class="btn-outline btn-warning" />
-            @endif
-            <x-mary-button label="Apply Discount" wire:click="applyDiscount" class="btn-primary"
-                :disabled="$discountType === 'percentage' && $discountValue > 100" />
-        </x-slot:actions>
-    </x-mary-modal>
-
     {{-- Hold Sale Modal --}}
     <x-mary-modal wire:model="showHoldSaleModal" title="Hold Sale" subtitle="Save current sale for later">
         <div class="space-y-4">
@@ -908,7 +937,7 @@
                         <ul class="mt-1 space-y-1 text-base-700">
                             <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Current cart will be saved and cleared</li>
                             <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ You can retrieve this sale later from "Held Sales"</li>
-                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Customer and discount information will be preserved</li>
+                            <li>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ Customer information will be preserved</li>
                         </ul>
                     </div>
                 </div>
@@ -979,57 +1008,6 @@
 
         <x-slot:actions>
             <x-mary-button label="Close" wire:click="$set('showHeldSalesModal', false)" />
-        </x-slot:actions>
-    </x-mary-modal>
-
-    {{-- Receipt Print Modal --}}
-    <x-mary-modal wire:model="showReceiptModal" title="Sale Completed" subtitle="Transaction processed successfully">
-        <div class="space-y-4">
-            <div class="p-4 border rounded-lg bg-success/10 border-success/20">
-                <div class="text-center">
-                    <x-heroicon-o-check-circle class="w-16 h-16 mx-auto mb-2 text-success" />
-                    <h3 class="text-lg font-bold text-success">Sale Completed Successfully!</h3>
-                    <p class="mt-1 text-sm text-success-700">Invoice #{{ $lastInvoiceNumber ?? 'N/A' }}</p>
-                </div>
-            </div>
-
-            <div class="p-4 rounded-lg bg-base-200">
-                <h4 class="mb-2 font-semibold">Transaction Summary</h4>
-                <div class="space-y-1 text-sm">
-                    <div class="flex justify-between">
-                        <span>Payment Method:</span>
-                        <span class="capitalize">{{ $lastPaymentMethod ?? 'Cash' }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Amount Paid:</span>
-                        <span>&#8369;{{ number_format($lastPaidAmount ?? 0, 2) }}</span>
-                    </div>
-                    @if (($lastChangeAmount ?? 0) > 0)
-                        <div class="flex justify-between font-medium text-success">
-                            <span>Change Given:</span>
-                            <span>&#8369;{{ number_format($lastChangeAmount ?? 0, 2) }}</span>
-                        </div>
-                    @endif
-                </div>
-            </div>
-
-            <div class="p-4 rounded-lg bg-info/10">
-                <div class="flex items-start space-x-2">
-                    <x-heroicon-o-information-circle class="w-5 h-5 mt-0.5 text-info" />
-                    <div class="text-sm">
-                        <p class="font-medium text-info">Important Reminder:</p>
-                        <p class="mt-1 text-base-700">
-                            This is a provisional receipt for internal tracking only.
-                            Please issue an official BIR receipt manually for legal compliance.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <x-slot:actions>
-            <x-mary-button label="Print Receipt" wire:click="printReceipt" class="btn-primary" />
-            <x-mary-button label="New Sale" wire:click="startNewSale" class="btn-success" />
         </x-slot:actions>
     </x-mary-modal>
 

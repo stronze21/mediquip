@@ -1,3 +1,7 @@
+@php
+    $printSettings = \App\Support\PrintDocumentSettings::for('purchase_order');
+@endphp
+
 <div class="max-w-6xl p-6 mx-auto">
 
     <style>
@@ -129,21 +133,11 @@
 
             <div class="p-8 print-body">
 
-                {{-- HEADER --}}
-                <div class="pb-6 mb-6 text-center border-b po-header">
-
-                    {{-- Company Logo --}}
-                    {{-- Replace with your logo --}}
-                    {{-- <img src="{{ asset('images/logo.png') }}" class="h-20 mx-auto mb-3"> --}}
-
-                    <h1 class="text-3xl font-bold">
-                        PURCHASE ORDER
-                    </h1>
-
-                    <p class="text-sm text-gray-500">
-                        {{ $purchaseOrder->po_number }}
-                    </p>
-                </div>
+                @include('print.partials.document-header', [
+                    'printSettings' => $printSettings,
+                    'documentTitle' => 'PURCHASE ORDER',
+                    'documentNumber' => $purchaseOrder->po_number,
+                ])
 
                 {{-- DETAILS --}}
                 <div class="grid grid-cols-2 gap-8 mb-8">
@@ -340,38 +334,7 @@
                     </div>
                 @endif
 
-                {{-- SIGNATURES --}}
-                <div class="grid grid-cols-4 gap-6 mt-10 text-center">
-
-                    <div>
-                        <div class="pt-2 border-t">
-                            Prepared By
-                        </div>
-
-                        <div class="mt-1 font-semibold">
-                            {{ $purchaseOrder->requestedBy?->name }}
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="pt-2 border-t">
-                            Checked By
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="pt-2 border-t">
-                            Approved By
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="pt-2 border-t">
-                            Supplier Conforme
-                        </div>
-                    </div>
-
-                </div>
+                @include('print.partials.document-footer', ['printSettings' => $printSettings])
 
             </div>
 

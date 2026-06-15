@@ -14,10 +14,12 @@ use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
 class PointOfSale extends Component
 {
+    use WithPagination;
     use Toast;
 
     // Cart and sale data
@@ -42,7 +44,6 @@ class PointOfSale extends Component
     // UI state
     public $showCustomerModal = false;
     public $showPaymentModal = false;
-    public $showDiscountModal = false;
     public $showHoldSaleModal = false;
     public $showSearchCustomerModal = false;
     public $searchResults = [];
@@ -102,6 +103,15 @@ class PointOfSale extends Component
     public $serviceResults = [];
     public $showServiceModal = false;
 
+    // Invoice workflow state
+    public $showInvoiceForm = false;
+    public $editingInvoiceId = null;
+    public $invoiceSearch = '';
+    public $customerFilter = '';
+    public $invoiceStatusFilter = '';
+    public $invoiceTypeFilter = '';
+    public $invoiceDateFilter = '';
+
     public function mount()
     {
         $this->selectedWarehouse = Warehouse::where('is_active', true)->first()?->id;
@@ -112,12 +122,186 @@ class PointOfSale extends Component
     public function render()
     {
         $warehouses = Warehouse::where('is_active', true)->get();
-        $customers = Customer::where('is_active', true)->orderBy('name')->get();
+        $customers = Customer::where('is_active', true)
+            ->where('name', 'not like', '%walk-in%')
+            ->where('name', 'not like', '%walk in%')
+            ->orderBy('name')
+            ->get();
+        $products = Product::where('status', 'active')->orderBy('name')->get();
+        $invoices = Sale::with(['customer', 'warehouse', 'items'])
+            ->when($this->invoiceSearch, function ($query) {
+                $query->where(function ($subQuery) {
+                    $subQuery->where('invoice_number', 'like', '%' . $this->invoiceSearch . '%')
+                        ->orWhereHas('customer', function ($customerQuery) {
+                            $customerQuery->where('name', 'like', '%' . $this->invoiceSearch . '%');
+                        });
+                });
+            })
+            ->when($this->customerFilter, fn($query) => $query->where('customer_id', $this->customerFilter))
+            ->when($this->invoiceStatusFilter, fn($query) => $query->where('status', $this->invoiceStatusFilter))
+            ->when($this->invoiceTypeFilter, fn($query) => $query->where('invoice_type', $this->invoiceTypeFilter))
+            ->when($this->invoiceDateFilter, function ($query) {
+                return match ($this->invoiceDateFilter) {
+                    'today' => $query->whereDate('created_at', today()),
+                    'week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
+                    'month' => $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year),
+                    default => $query,
+                };
+            })
+            ->orderByRaw("CASE WHEN status = 'draft' THEN 0 ELSE 1 END")
+            ->latest()
+            ->paginate(20);
+
+        $filterOptions = [
+            'customers' => $customers->map(fn($customer) => ['value' => $customer->id, 'label' => $customer->name]),
+            'statuses' => [
+                ['value' => '', 'label' => 'All Status'],
+                ['value' => 'draft', 'label' => 'Draft'],
+                ['value' => 'completed', 'label' => 'Completed'],
+                ['value' => 'cancelled', 'label' => 'Cancelled'],
+                ['value' => 'refunded', 'label' => 'Refunded'],
+            ],
+            'types' => [
+                ['value' => '', 'label' => 'All Types'],
+                ['value' => 'sales', 'label' => 'Sales Invoice'],
+                ['value' => 'service', 'label' => 'Service Invoice'],
+            ],
+            'dates' => [
+                ['value' => '', 'label' => 'All Dates'],
+                ['value' => 'today', 'label' => 'Today'],
+                ['value' => 'week', 'label' => 'This Week'],
+                ['value' => 'month', 'label' => 'This Month'],
+            ],
+        ];
 
         return view('livewire.sales.point-of-sale', [
             'warehouses' => $warehouses,
             'customers' => $customers,
+            'products' => $products,
+            'invoices' => $invoices,
+            'filterOptions' => $filterOptions,
         ])->layout('layouts.app', ['title' => 'Invoice']);
+    }
+
+    public function openInvoiceForm()
+    {
+        $this->resetSale();
+        $this->editingInvoiceId = null;
+        $this->showInvoiceForm = true;
+        $this->ensureInvoiceProductRow();
+    }
+
+    public function closeInvoiceForm()
+    {
+        $this->showInvoiceForm = false;
+        $this->editingInvoiceId = null;
+        $this->resetSale();
+        $this->resetValidation();
+    }
+
+    public function editInvoice(Sale $sale)
+    {
+        if ($sale->status !== 'draft') {
+            $this->error('Only draft invoices can be edited.');
+            return;
+        }
+
+        $this->loadInvoiceIntoForm($sale);
+        $this->showInvoiceForm = true;
+    }
+
+    public function processInvoice(Sale $sale)
+    {
+        if ($sale->status !== 'draft') {
+            $this->error('Only draft invoices can be processed.');
+            return;
+        }
+
+        $this->loadInvoiceIntoForm($sale);
+        $this->showInvoiceForm = true;
+        $this->openPaymentModal();
+    }
+
+    private function loadInvoiceIntoForm(Sale $sale): void
+    {
+        $sale->load(['items.product', 'items.service']);
+        $this->resetSale();
+        $this->editingInvoiceId = $sale->id;
+        $this->selectedCustomer = $this->isWalkInCustomer($sale->customer) ? null : $sale->customer_id;
+        $this->selectedWarehouse = $sale->warehouse_id;
+        $this->invoiceType = $sale->invoice_type ?? 'sales';
+        $this->taxType = $sale->tax_type ?? 'vat_12';
+        $this->taxRate = (float) ($sale->tax_rate ?? $this->taxRateForType($this->taxType));
+        $this->disableInvoiceDiscounts();
+        $this->saleNotes = str_replace('HELD SALE: ', '', $sale->notes ?? '');
+
+        foreach ($sale->items as $item) {
+            if (($item->item_type ?? 'product') === 'service') {
+                $this->cartItems['service_' . $item->service_id] = [
+                    'item_type' => 'service',
+                    'product_id' => null,
+                    'service_id' => $item->service_id,
+                    'name' => $item->product_name,
+                    'code' => $item->product_sku,
+                    'price' => (float) $item->unit_price,
+                    'quantity' => $item->quantity,
+                    'subtotal' => (float) $item->total_price,
+                    'tax_type' => $item->tax_type ?? $sale->tax_type ?? 'vat_12',
+                    'track_serial' => false,
+                    'serial_numbers' => [],
+                    'available_stock' => null,
+                ];
+                continue;
+            }
+
+            $product = $item->product;
+            $inventory = $product
+                ? $product->inventory()->where('warehouse_id', $this->selectedWarehouse)->first()
+                : null;
+
+            $this->cartItems['line_' . $item->id] = [
+                'item_type' => 'product',
+                'product_id' => $item->product_id,
+                'service_id' => null,
+                'name' => $item->product_name,
+                'code' => $item->product_sku,
+                'price' => (float) $item->unit_price,
+                'quantity' => $item->quantity,
+                'available_stock' => $inventory ? $inventory->quantity_available : 0,
+                'subtotal' => (float) $item->total_price,
+                'tax_type' => $item->tax_type ?? $sale->tax_type ?? 'vat_12',
+                'track_serial' => $product?->track_serial ?? false,
+                'serial_numbers' => $item->serial_numbers ?? [],
+            ];
+        }
+
+        $this->updateCartTotals();
+    }
+
+    public function clearInvoiceFilters()
+    {
+        $this->reset(['invoiceSearch', 'customerFilter', 'invoiceStatusFilter', 'invoiceTypeFilter', 'invoiceDateFilter']);
+        $this->resetPage();
+    }
+
+    private function isWalkInCustomer(?Customer $customer): bool
+    {
+        if (!$customer) {
+            return false;
+        }
+
+        $name = strtolower($customer->name);
+
+        return str_contains($name, 'walk-in') || str_contains($name, 'walk in');
+    }
+
+    public function customerDisplayName(?Customer $customer): string
+    {
+        if (!$customer || $this->isWalkInCustomer($customer)) {
+            return 'No customer';
+        }
+
+        return $customer->name;
     }
 
     public function updatedInvoiceType($type)
@@ -127,6 +311,7 @@ class PointOfSale extends Component
         $this->searchResults = [];
         $this->searchService = '';
         $this->serviceResults = [];
+        $this->ensureInvoiceProductRow();
         $this->updateCartTotals();
     }
 
@@ -143,9 +328,117 @@ class PointOfSale extends Component
             if (empty($item['tax_type'])) {
                 $this->cartItems[$cartKey]['tax_type'] = 'vat_12';
             }
+
+            if (($item['item_type'] ?? 'product') === 'product' && !empty($item['product_id'])) {
+                $this->syncInvoiceProductLine($cartKey, (int) $item['product_id']);
+            }
         }
 
         $this->updateCartTotals();
+    }
+
+    public function addInvoiceItem(): void
+    {
+        $this->cartItems['line_' . uniqid()] = $this->blankInvoiceProductLine();
+
+        $this->updateCartTotals();
+    }
+
+    private function blankInvoiceProductLine(): array
+    {
+        return [
+            'item_type' => 'product',
+            'product_id' => '',
+            'service_id' => null,
+            'name' => '',
+            'code' => '',
+            'price' => 0,
+            'quantity' => 1,
+            'available_stock' => null,
+            'subtotal' => 0,
+            'tax_type' => 'vat_12',
+            'track_serial' => false,
+            'serial_numbers' => [],
+        ];
+    }
+
+    private function ensureInvoiceProductRow(): void
+    {
+        if ($this->invoiceType === 'sales' && empty($this->cartItems)) {
+            $this->cartItems['line_' . uniqid()] = $this->blankInvoiceProductLine();
+        }
+    }
+
+    public function selectInvoiceProduct(string $cartKey, $productId): void
+    {
+        $this->syncInvoiceProductLine($cartKey, (int) $productId, true);
+        $this->updateCartTotals();
+    }
+
+    private function syncInvoiceProductLine(string $cartKey, int $productId, bool $resetPrice = false): void
+    {
+        if (!isset($this->cartItems[$cartKey]) || !$productId) {
+            return;
+        }
+
+        $product = Product::with(['inventory' => function ($query) {
+            $query->where('warehouse_id', $this->selectedWarehouse);
+        }])->find($productId);
+
+        if (!$product) {
+            return;
+        }
+
+        $inventory = $product->inventory->first();
+        $price = (float) ($this->cartItems[$cartKey]['price'] ?? 0);
+
+        $this->cartItems[$cartKey]['item_type'] = 'product';
+        $this->cartItems[$cartKey]['product_id'] = $product->id;
+        $this->cartItems[$cartKey]['service_id'] = null;
+        $this->cartItems[$cartKey]['name'] = $product->name;
+        $this->cartItems[$cartKey]['code'] = $product->sku;
+        $this->cartItems[$cartKey]['available_stock'] = $inventory ? $inventory->quantity_available : 0;
+        $this->cartItems[$cartKey]['track_serial'] = $product->track_serial;
+
+        if ($resetPrice || $price <= 0) {
+            $this->cartItems[$cartKey]['price'] = (float) $product->selling_price;
+        }
+
+        $this->cartItems[$cartKey]['subtotal'] =
+            (float) ($this->cartItems[$cartKey]['quantity'] ?? 1) * (float) ($this->cartItems[$cartKey]['price'] ?? 0);
+
+        if ($product->track_serial) {
+            $this->cartItems[$cartKey]['serial_numbers'] = [];
+        }
+    }
+
+    public function hasIncompleteInvoiceProductLines(): bool
+    {
+        foreach ($this->cartItems as $item) {
+            if (($item['item_type'] ?? 'product') === 'product' && empty($item['product_id'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function hasSelectedInvoiceProductLines(): bool
+    {
+        foreach ($this->cartItems as $item) {
+            if (($item['item_type'] ?? 'product') === 'product' && !empty($item['product_id'])) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function invoiceLineCount(): int
+    {
+        return collect($this->cartItems)
+            ->filter(fn($item) => ($item['item_type'] ?? 'product') === 'service' || !empty($item['product_id']))
+            ->count();
     }
 
     public function taxRateForType(string $type): float
@@ -383,6 +676,7 @@ class PointOfSale extends Component
     public function removeFromCart($cartKey)
     {
         unset($this->cartItems[$cartKey]);
+        $this->ensureInvoiceProductRow();
         $this->updateCartTotals();
         $this->success('Item removed from cart.');
     }
@@ -393,8 +687,13 @@ class PointOfSale extends Component
 
         $item = $this->cartItems[$cartKey];
 
-        // Check stock limit for products only
-        if ($item['item_type'] === 'product' && $item['quantity'] >= $item['available_stock']) {
+        // Check stock limit for selected products only.
+        if (
+            $item['item_type'] === 'product'
+            && !empty($item['product_id'])
+            && ($item['available_stock'] ?? null) !== null
+            && $item['quantity'] >= $item['available_stock']
+        ) {
             $this->error('Cannot add more items. Stock limit reached.');
             return;
         }
@@ -416,6 +715,7 @@ class PointOfSale extends Component
                 $this->cartItems[$cartKey]['quantity'] * $this->cartItems[$cartKey]['price'];
         } else {
             unset($this->cartItems[$cartKey]);
+            $this->ensureInvoiceProductRow();
         }
 
         $this->updateCartTotals();
@@ -551,19 +851,6 @@ class PointOfSale extends Component
         } else {
             $this->warning('No new serial numbers were added.');
         }
-    }
-
-    public function selectWalkInCustomer()
-    {
-        // Don't allow walk-in customers for serial tracking items
-        if ($this->hasSerialTrackingItems()) {
-            $this->error('Walk-in customers not allowed for items requiring serial number tracking. Please create a customer record.');
-            return;
-        }
-
-        // Set a default walk-in customer or null for walk-in sales
-        $this->selectedCustomer = null; // or set to a default walk-in customer ID
-        $this->success('Walk-in customer selected');
     }
 
     // ===== EXISTING POS METHODS (UPDATED) =====
@@ -773,9 +1060,9 @@ class PointOfSale extends Component
         }
 
         if (isset($this->cartItems[$cartKey])) {
-            $availableStock = $this->cartItems[$cartKey]['available_stock'];
+            $availableStock = $this->cartItems[$cartKey]['available_stock'] ?? null;
 
-            if ($quantity > $availableStock) {
+            if ($availableStock !== null && $quantity > $availableStock) {
                 $this->error('Quantity exceeds available stock (' . $availableStock . ')');
                 return;
             }
@@ -802,21 +1089,8 @@ class PointOfSale extends Component
 
     public function applyDiscount()
     {
-        $this->validate([
-            'discountType' => 'required|in:percentage,fixed,senior,pwd',
-            'discountValue' => 'required_if:discountType,percentage,fixed|nullable|numeric|min:0',
-        ]);
-
-        if ($this->discountType === 'percentage' && $this->discountValue > 100) {
-            $this->error('Percentage discount cannot exceed 100%');
-            return;
-        }
-
-        $this->discountAmount = $this->calculateDiscountAmount();
-
-        $this->updateCartTotals();
-        $this->showDiscountModal = false;
-        $this->success('Discount applied successfully!');
+        $this->disableInvoiceDiscounts();
+        $this->warning('Discounts are temporarily disabled for sales invoices.');
     }
 
     public function updatedDiscountType()
@@ -899,6 +1173,16 @@ class PointOfSale extends Component
             return;
         }
 
+        if ($this->hasIncompleteInvoiceProductLines()) {
+            $this->error('Please select a product for every invoice item.');
+            return;
+        }
+
+        if (!$this->selectedCustomer) {
+            $this->error('Please select or create a customer before processing this invoice.');
+            return;
+        }
+
         // Check if customer is selected for items requiring serial tracking
         $serialTrackingItems = array_filter($this->cartItems, function ($item) {
             // Only check products, skip services
@@ -930,11 +1214,11 @@ class PointOfSale extends Component
         $this->paymentMethod = 'cash';
         $this->paymentTerms = 'Due on receipt';
         $this->paymentDueDate = '';
-        $this->saleNotes = '';
         $this->showPaymentModal = true;
     }
     public function completeSale()
     {
+        $this->disableInvoiceDiscounts();
         $this->paidAmount = (float) ($this->paidAmount ?: 0);
         $usesPaymentTerms = $this->paymentMethod === 'terms';
 
@@ -943,8 +1227,8 @@ class PointOfSale extends Component
             return;
         }
 
-        if ($usesPaymentTerms && !$this->selectedCustomer) {
-            $this->error('Please select a customer before using payment terms.');
+        if (!$this->selectedCustomer) {
+            $this->error('Please select or create a customer before completing this invoice.');
             return;
         }
 
@@ -1006,17 +1290,16 @@ class PointOfSale extends Component
 
             $billing = $this->calculateBilling();
 
-            // Create sale record
-            $sale = Sale::create([
+            $saleData = [
                 'customer_id' => $this->selectedCustomer,
-                'promotion_code' => $this->discountAmount > 0 ? $this->discountLabel() : null,
+                'promotion_code' => null,
                 'invoice_type' => $this->invoiceType,
                 'tax_type' => $billing['tax_type'],
                 'tax_rate' => $billing['tax_rate'],
                 'warehouse_id' => $this->selectedWarehouse,
                 'user_id' => auth()->id(),
                 'subtotal' => $this->subtotal,
-                'discount_amount' => $this->discountAmount,
+                'discount_amount' => 0,
                 'tax_amount' => $this->taxAmount,
                 'total_amount' => $this->totalAmount,
                 'paid_amount' => $this->paidAmount,
@@ -1028,7 +1311,15 @@ class PointOfSale extends Component
                 'status' => 'completed',
                 'notes' => $this->saleNotes,
                 'completed_at' => now(),
-            ]);
+            ];
+
+            if ($this->editingInvoiceId) {
+                $sale = Sale::where('status', 'draft')->findOrFail($this->editingInvoiceId);
+                $sale->items()->delete();
+                $sale->update($saleData);
+            } else {
+                $sale = Sale::create($saleData);
+            }
 
             // Process cart items (both products and services)
             foreach ($this->cartItems as $cartKey => $item) {
@@ -1053,6 +1344,8 @@ class PointOfSale extends Component
 
             $this->success(($usesPaymentTerms ? 'Invoice completed with payment terms! Invoice: ' : 'Invoice completed successfully! Invoice: ') . $sale->invoice_number);
             $this->resetSale();
+            $this->showInvoiceForm = false;
+            $this->editingInvoiceId = null;
             $this->showPaymentModal = false;
         } catch (\Exception $e) {
             DB::rollBack();
@@ -1194,9 +1487,10 @@ class PointOfSale extends Component
     // Updated validation for mixed cart
     public function validateCustomerForSerials()
     {
-        if ($this->hasSerialTrackingItems() && !$this->selectedCustomer) {
+        if (!$this->selectedCustomer) {
             return false;
         }
+
         return true;
     }
 
@@ -1283,6 +1577,100 @@ class PointOfSale extends Component
         $this->paymentDueDate = '';
         $this->saleNotes = '';
         $this->updateCartTotals();
+    }
+
+    private function disableInvoiceDiscounts(): void
+    {
+        $this->discountType = 'percentage';
+        $this->discountValue = '';
+        $this->discountAmount = 0;
+        $this->updateCartTotals();
+    }
+
+    public function saveInvoiceDraft()
+    {
+        $this->disableInvoiceDiscounts();
+
+        if (empty($this->cartItems)) {
+            $this->error('Add at least one item before saving a draft.');
+            return;
+        }
+
+        if ($this->hasIncompleteInvoiceProductLines()) {
+            $this->error('Please select a product for every invoice item.');
+            return;
+        }
+
+        if (!$this->selectedCustomer) {
+            $this->error('Please select or create a customer before saving this invoice draft.');
+            return;
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $billing = $this->calculateBilling();
+            $invoiceData = [
+                'customer_id' => $this->selectedCustomer,
+                'promotion_code' => null,
+                'invoice_type' => $this->invoiceType,
+                'tax_type' => $billing['tax_type'],
+                'tax_rate' => $billing['tax_rate'],
+                'warehouse_id' => $this->selectedWarehouse,
+                'user_id' => auth()->id(),
+                'subtotal' => $this->subtotal,
+                'discount_amount' => 0,
+                'tax_amount' => $this->taxAmount,
+                'total_amount' => $this->totalAmount,
+                'paid_amount' => 0,
+                'change_amount' => 0,
+                'payment_method' => 'terms',
+                'payment_terms' => $this->paymentTerms,
+                'due_date' => $this->paymentDueDate ?: null,
+                'payment_status' => 'unpaid',
+                'status' => 'draft',
+                'notes' => $this->saleNotes,
+                'completed_at' => null,
+            ];
+
+            if ($this->editingInvoiceId) {
+                $invoice = Sale::where('status', 'draft')->findOrFail($this->editingInvoiceId);
+                $invoice->update($invoiceData);
+                $invoice->items()->delete();
+            } else {
+                $invoice = Sale::create($invoiceData);
+                $this->editingInvoiceId = $invoice->id;
+            }
+
+            foreach ($this->cartItems as $item) {
+                $product = $item['item_type'] === 'product' ? Product::find($item['product_id']) : null;
+
+                SaleItem::create([
+                    'sale_id' => $invoice->id,
+                    'item_type' => $item['item_type'],
+                    'product_id' => $item['product_id'],
+                    'service_id' => $item['service_id'] ?? null,
+                    'product_name' => $item['name'],
+                    'product_sku' => $item['code'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['price'],
+                    'total_price' => $item['subtotal'],
+                    'tax_type' => $item['tax_type'] ?? 'vat_12',
+                    'tax_rate' => $this->taxRateForType($item['tax_type'] ?? 'vat_12'),
+                    'tax_amount' => $this->calculateLineBilling($item)['tax_amount'],
+                    'cost_price' => $product->cost_price ?? 0,
+                    'serial_numbers' => $item['serial_numbers'] ?? [],
+                ]);
+            }
+
+            DB::commit();
+
+            $this->success('Invoice draft saved: ' . $invoice->invoice_number);
+            $this->closeInvoiceForm();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            $this->error('Error saving invoice draft: ' . $e->getMessage());
+        }
     }
 
     public function scanBarcode($barcode)
@@ -1519,6 +1907,11 @@ class PointOfSale extends Component
             'customerPhone' => 'nullable|string|max:20',
         ]);
 
+        if (str_contains(strtolower($this->customerName), 'walk-in') || str_contains(strtolower($this->customerName), 'walk in')) {
+            $this->error('Please enter the actual customer name for sales invoices.');
+            return;
+        }
+
         try {
             $customer = Customer::create([
                 'name' => $this->customerName,
@@ -1558,6 +1951,8 @@ class PointOfSale extends Component
     {
         if (strlen($this->customerSearch) >= 2) {
             $this->customerSearchResults = Customer::where('is_active', true)
+                ->where('name', 'not like', '%walk-in%')
+                ->where('name', 'not like', '%walk in%')
                 ->where(function ($query) {
                     $query->where('name', 'like', '%' . $this->customerSearch . '%')
                         ->orWhere('email', 'like', '%' . $this->customerSearch . '%')
@@ -1573,9 +1968,14 @@ class PointOfSale extends Component
 
     public function selectSearchedCustomer($customerId)
     {
+        $customer = Customer::find($customerId);
+        if (!$customer || $this->isWalkInCustomer($customer)) {
+            $this->error('Please select or create an actual customer for sales invoices.');
+            return;
+        }
+
         $this->selectedCustomer = $customerId;
         $this->showSearchCustomerModal = false;
-        $customer = Customer::find($customerId);
         $this->success('Customer selected: ' . $customer->name);
     }
 
@@ -1587,22 +1987,14 @@ class PointOfSale extends Component
     // ===== DISCOUNT METHODS =====
     public function openDiscountModal()
     {
-        if (empty($this->cartItems)) {
-            $this->error('Cart is empty. Add items first.');
-            return;
-        }
-        $this->discountType = 'percentage';
-        $this->discountValue = '';
-        $this->showDiscountModal = true;
+        $this->disableInvoiceDiscounts();
+        $this->warning('Discounts are temporarily disabled for sales invoices.');
     }
 
     public function removeDiscount()
     {
-        $this->discountType = 'percentage';
-        $this->discountValue = '';
-        $this->discountAmount = 0;
-        $this->updateCartTotals();
-        $this->success('Discount removed!');
+        $this->disableInvoiceDiscounts();
+        $this->success('Discount removed.');
     }
 
     // ===== HOLD SALE METHODS =====
@@ -1689,7 +2081,7 @@ class PointOfSale extends Component
                 return [
                     'id' => $sale->id,
                     'invoice_number' => $sale->invoice_number,
-                    'customer_name' => $sale->customer?->name ?? 'Walk-in Customer',
+                    'customer_name' => $sale->customer?->name ?? 'No customer',
                     'total_amount' => $sale->total_amount,
                     'items_count' => $sale->items->count(),
                     'created_at' => $sale->created_at->format('M d, Y H:i'),
@@ -1837,8 +2229,13 @@ class PointOfSale extends Component
         $newQuantity = max(1, intval($newQuantity));
         $item = $this->cartItems[$cartKey];
 
-        // Check stock limit for products only
-        if ($item['item_type'] === 'product' && $newQuantity > ($item['available_stock'] ?? 0)) {
+        // Check stock limit for selected products only.
+        if (
+            $item['item_type'] === 'product'
+            && !empty($item['product_id'])
+            && ($item['available_stock'] ?? null) !== null
+            && $newQuantity > $item['available_stock']
+        ) {
             $this->error('Cannot set quantity to ' . $newQuantity . '. Available stock: ' . ($item['available_stock'] ?? 0));
             return;
         }
@@ -1885,8 +2282,9 @@ class PointOfSale extends Component
     public function clearCart()
     {
         $this->cartItems = [];
+        $this->ensureInvoiceProductRow();
         $this->updateCartTotals();
-        $this->success('Cart cleared.');
+        $this->success('Invoice items cleared.');
     }
 
     public function openSerialModal($cartKey)

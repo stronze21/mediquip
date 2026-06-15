@@ -4,6 +4,7 @@ use App\Exports\ProductsExport;
 use App\Http\Controllers\InvoiceController; // Add this import
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\StatementOfAccountController;
+use App\Livewire\Admin\PrintSettings;
 use App\Livewire\Admin\RecomputeManagement;
 use App\Livewire\Admin\UserManagement;
 use App\Livewire\Admin\UserManual;
@@ -178,9 +179,7 @@ Route::middleware([
     // Additional Admin Routes
     Route::middleware(['role:admin'])->prefix('admin')->name('admin.')->group(function () { // Add to the admin middleware group
 
-        Route::get('/settings', function () {
-            return view('placeholder', ['title' => 'System Settings', 'message' => 'Coming Soon']);
-        })->name('settings');
+        Route::get('/settings', PrintSettings::class)->name('settings');
 
         Route::get('/activity-logs', function () {
             return view('placeholder', ['title' => 'Activity Logs', 'message' => 'Coming Soon']);
