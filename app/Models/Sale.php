@@ -149,9 +149,10 @@ class Sale extends Model
     protected static function boot()
     {
         parent::boot();
-        static::creating(function ($model) {
-            if (empty($model->invoice_number)) {
-                $model->invoice_number = 'INV-' . date('Ymd') . '-' . str_pad(Sale::whereDate('created_at', today())->count() + 1, 4, '0', STR_PAD_LEFT);
+
+        static::saving(function ($model) {
+            if (is_string($model->invoice_number)) {
+                $model->invoice_number = trim($model->invoice_number);
             }
         });
     }

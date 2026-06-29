@@ -383,7 +383,6 @@ class PurchaseSeeder extends Seeder
      */
     private function generatePONumber($date)
     {
-        $sequence = PurchaseOrder::whereDate('created_at', $date->format('Y-m-d'))->count() + 1;
-        return 'PO-' . $date->format('Ymd') . '-' . str_pad($sequence, 4, '0', STR_PAD_LEFT);
+        return PurchaseOrder::generatePONumber($date);
     }
 }

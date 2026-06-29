@@ -637,6 +637,7 @@ class PurchaseOrderManagement extends Component
         try {
             $newPO = $po->replicate();
             $newPO->status = 'draft';
+            $newPO->po_number = null;
             $newPO->order_date = now()->format('Y-m-d');
             $newPO->expected_date = now()->addDays(7)->format('Y-m-d');
             $newPO->requested_by = auth()->id();

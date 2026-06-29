@@ -12,6 +12,7 @@ use App\Models\SerialNumber;
 use App\Models\StockMovement;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -40,6 +41,7 @@ class PointOfSale extends Component
     public $paymentDueDate = '';
     public $saleNotes = '';
     public $invoiceType = 'sales';
+    public $invoiceNumber = '';
 
     // UI state
     public $showCustomerModal = false;
@@ -230,6 +232,7 @@ class PointOfSale extends Component
         $this->selectedCustomer = $this->isWalkInCustomer($sale->customer) ? null : $sale->customer_id;
         $this->selectedWarehouse = $sale->warehouse_id;
         $this->invoiceType = $sale->invoice_type ?? 'sales';
+        $this->invoiceNumber = $sale->invoice_number;
         $this->taxType = $sale->tax_type ?? 'vat_12';
         $this->taxRate = (float) ($sale->tax_rate ?? $this->taxRateForType($this->taxType));
         $this->disableInvoiceDiscounts();
@@ -1168,6 +1171,10 @@ class PointOfSale extends Component
     #[On('open-payment-modal')]
     public function openPaymentModal()
     {
+        if (!$this->validateInvoiceNumber()) {
+            return;
+        }
+
         if (empty($this->cartItems)) {
             $this->error('Cart is empty. Add items first.');
             return;
@@ -1221,6 +1228,10 @@ class PointOfSale extends Component
         $this->disableInvoiceDiscounts();
         $this->paidAmount = (float) ($this->paidAmount ?: 0);
         $usesPaymentTerms = $this->paymentMethod === 'terms';
+
+        if (!$this->validateInvoiceNumber()) {
+            return;
+        }
 
         if (!$usesPaymentTerms && $this->paidAmount < $this->totalAmount) {
             $this->error('Insufficient payment amount.');
@@ -1289,8 +1300,10 @@ class PointOfSale extends Component
             }
 
             $billing = $this->calculateBilling();
+            $invoiceNumber = trim($this->invoiceNumber);
 
             $saleData = [
+                'invoice_number' => $invoiceNumber,
                 'customer_id' => $this->selectedCustomer,
                 'promotion_code' => null,
                 'invoice_type' => $this->invoiceType,
@@ -1576,6 +1589,7 @@ class PointOfSale extends Component
         $this->paymentTerms = 'Due on receipt';
         $this->paymentDueDate = '';
         $this->saleNotes = '';
+        $this->invoiceNumber = '';
         $this->updateCartTotals();
     }
 
@@ -1590,6 +1604,10 @@ class PointOfSale extends Component
     public function saveInvoiceDraft()
     {
         $this->disableInvoiceDiscounts();
+
+        if (!$this->validateInvoiceNumber()) {
+            return;
+        }
 
         if (empty($this->cartItems)) {
             $this->error('Add at least one item before saving a draft.');
@@ -1610,7 +1628,10 @@ class PointOfSale extends Component
             DB::beginTransaction();
 
             $billing = $this->calculateBilling();
+            $invoiceNumber = trim($this->invoiceNumber);
+
             $invoiceData = [
+                'invoice_number' => $invoiceNumber,
                 'customer_id' => $this->selectedCustomer,
                 'promotion_code' => null,
                 'invoice_type' => $this->invoiceType,
@@ -1671,6 +1692,25 @@ class PointOfSale extends Component
             DB::rollBack();
             $this->error('Error saving invoice draft: ' . $e->getMessage());
         }
+    }
+
+    private function validateInvoiceNumber(): bool
+    {
+        $this->invoiceNumber = trim($this->invoiceNumber);
+
+        $this->validate([
+            'invoiceNumber' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('sales', 'invoice_number')->ignore($this->editingInvoiceId),
+            ],
+        ], [
+            'invoiceNumber.required' => 'Please enter an invoice number.',
+            'invoiceNumber.unique' => 'This invoice number is already in use.',
+        ]);
+
+        return true;
     }
 
     public function scanBarcode($barcode)

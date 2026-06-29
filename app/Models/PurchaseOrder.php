@@ -277,12 +277,7 @@ class PurchaseOrder extends Model
 
         static::creating(function ($model) {
             if (empty($model->po_number)) {
-                $model->po_number = 'PO-' . date('Ymd') . '-' . str_pad(
-                    PurchaseOrder::whereDate('created_at', today())->count() + 1,
-                    4,
-                    '0',
-                    STR_PAD_LEFT
-                );
+                $model->po_number = static::generatePONumber($model->order_date);
             }
         });
 
@@ -299,5 +294,22 @@ class PurchaseOrder extends Model
                 }
             }
         });
+    }
+
+    public static function generatePONumber($date = null): string
+    {
+        $year = $date ? \Illuminate\Support\Carbon::parse($date)->format('Y') : now()->format('Y');
+        $prefix = 'PO-' . $year;
+        $nextSequence = static::query()
+            ->where('po_number', 'like', $prefix . '%')
+            ->get(['po_number'])
+            ->map(function (self $purchaseOrder) use ($prefix) {
+                return preg_match('/^' . preg_quote($prefix, '/') . '(\d+)$/', $purchaseOrder->po_number, $matches)
+                    ? (int) $matches[1]
+                    : 0;
+            })
+            ->max() + 1;
+
+        return $prefix . str_pad((string) $nextSequence, 3, '0', STR_PAD_LEFT);
     }
 }

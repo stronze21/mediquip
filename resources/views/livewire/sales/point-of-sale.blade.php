@@ -55,6 +55,9 @@
                             ['value' => 'service', 'label' => 'Service Invoice'],
                         ]" wire:model.live="invoiceType" option-label="label" option-value="value" />
 
+                        <x-mary-input label="Invoice Number *" wire:model.blur="invoiceNumber"
+                            placeholder="Enter invoice number" />
+
                         <x-mary-select label="Warehouse *" :options="$warehouses" wire:model="selectedWarehouse"
                             option-value="id" option-label="name" placeholder="Select warehouse" />
 
@@ -432,7 +435,7 @@
                         <div class="flex gap-2 pt-4 border-t">
                             <x-mary-button label="Clear Items" wire:click="clearCart" class="btn-ghost btn-sm" />
                             <x-mary-button label="Save Draft" wire:click="saveInvoiceDraft"
-                                class="btn-outline btn-sm" :disabled="!$selectedCustomer || $this->hasIncompleteInvoiceProductLines()" />
+                                class="btn-outline btn-sm" :disabled="!$selectedCustomer || !$invoiceNumber || $this->hasIncompleteInvoiceProductLines()" />
                         </div>
                     </div>
                 @else
@@ -463,12 +466,16 @@
                 <p class="text-xs text-error md:mr-auto">
                     Customer is required before saving or processing this invoice.
                 </p>
+            @elseif (!$invoiceNumber)
+                <p class="text-xs text-error md:mr-auto">
+                    Invoice number is required before saving or processing this invoice.
+                </p>
             @endif
             <x-mary-button label="Cancel" wire:click="closeInvoiceForm" class="btn-ghost" />
             <x-mary-button label="Save Draft" wire:click="saveInvoiceDraft" class="btn-outline"
-                :disabled="!$selectedCustomer || $this->hasIncompleteInvoiceProductLines()" />
+                :disabled="!$selectedCustomer || !$invoiceNumber || $this->hasIncompleteInvoiceProductLines()" />
             <x-mary-button label="Process Invoice" wire:click="openPaymentModal" class="btn-primary"
-                :disabled="!$canCheckout" />
+                :disabled="!$invoiceNumber || !$canCheckout" />
         </div>
     </div>
 
