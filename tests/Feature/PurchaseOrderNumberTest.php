@@ -43,6 +43,24 @@ class PurchaseOrderNumberTest extends TestCase
         $this->assertSame('PO-2026002', $second->po_number);
     }
 
+    public function test_deleted_purchase_order_numbers_are_reused(): void
+    {
+        $user = User::factory()->create();
+        $supplier = Supplier::create(['name' => 'Acme Medical Supply']);
+        $warehouse = Warehouse::create(['name' => 'Main Warehouse', 'code' => 'MAIN']);
+
+        $first = $this->createPurchaseOrder($supplier->id, $warehouse->id, $user->id);
+        $second = $this->createPurchaseOrder($supplier->id, $warehouse->id, $user->id);
+
+        $first->delete();
+
+        $replacement = $this->createPurchaseOrder($supplier->id, $warehouse->id, $user->id);
+
+        $this->assertSame('PO-2026001', $first->po_number);
+        $this->assertSame('PO-2026002', $second->po_number);
+        $this->assertSame('PO-2026001', $replacement->po_number);
+    }
+
     public function test_legacy_purchase_order_numbers_can_be_updated_by_command(): void
     {
         $user = User::factory()->create();

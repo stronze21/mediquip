@@ -1223,28 +1223,35 @@ class PointOfSale extends Component
         $this->paymentDueDate = '';
         $this->showPaymentModal = true;
     }
+
+    public function proceedAsReceivable(): void
+    {
+        $this->paymentMethod = 'terms';
+        $this->paymentTerms = $this->paymentTerms ?: 'Due on receipt';
+        $this->paymentDueDate = $this->paymentDueDate ?: now()->toDateString();
+        $this->paidAmount = 0;
+        $this->changeAmount = 0;
+        $this->showPaymentModal = false;
+
+        $this->completeSale();
+    }
+
     public function completeSale()
     {
         $this->disableInvoiceDiscounts();
         $this->paidAmount = (float) ($this->paidAmount ?: 0);
         $usesPaymentTerms = $this->paymentMethod === 'terms';
 
-        if (!$this->validateInvoiceNumber()) {
-            return;
-        }
-
-        if (!$usesPaymentTerms && $this->paidAmount < $this->totalAmount) {
-            $this->error('Insufficient payment amount.');
-            return;
-        }
-
-        if (!$this->selectedCustomer) {
-            $this->error('Please select or create a customer before completing this invoice.');
+        if (!$this->validateInvoiceReadyForCompletion()) {
             return;
         }
 
         if ($usesPaymentTerms && empty($this->paymentDueDate)) {
-            $this->error('Please set a due date for the payment terms.');
+            $this->paymentDueDate = now()->toDateString();
+        }
+
+        if ($this->paidAmount < 0) {
+            $this->error('Payment amount cannot be negative.');
             return;
         }
 
@@ -1253,10 +1260,12 @@ class PointOfSale extends Component
             return;
         }
 
-        $paymentStatus = $this->paidAmount <= 0
+        $recordedPaidAmount = min($this->paidAmount, $this->totalAmount);
+        $hasReceivableBalance = $recordedPaidAmount < $this->totalAmount;
+        $paymentStatus = $recordedPaidAmount <= 0
             ? 'unpaid'
-            : ($this->paidAmount < $this->totalAmount ? 'partial' : 'paid');
-        $this->changeAmount = $usesPaymentTerms ? 0 : $this->changeAmount;
+            : ($hasReceivableBalance ? 'partial' : 'paid');
+        $this->changeAmount = $usesPaymentTerms ? 0 : max(0, $this->paidAmount - $this->totalAmount);
 
         try {
             DB::beginTransaction();
@@ -1315,12 +1324,12 @@ class PointOfSale extends Component
                 'discount_amount' => 0,
                 'tax_amount' => $this->taxAmount,
                 'total_amount' => $this->totalAmount,
-                'paid_amount' => $this->paidAmount,
+                'paid_amount' => $recordedPaidAmount,
                 'change_amount' => $this->changeAmount,
                 'payment_method' => $this->paymentMethod,
-                'payment_terms' => $usesPaymentTerms ? $this->paymentTerms : null,
-                'due_date' => $usesPaymentTerms ? $this->paymentDueDate : null,
-                'payment_status' => $usesPaymentTerms ? $paymentStatus : 'paid',
+                'payment_terms' => $hasReceivableBalance ? ($this->paymentTerms ?: 'Due on receipt') : null,
+                'due_date' => $hasReceivableBalance ? ($this->paymentDueDate ?: now()->toDateString()) : null,
+                'payment_status' => $paymentStatus,
                 'status' => 'completed',
                 'notes' => $this->saleNotes,
                 'completed_at' => now(),
@@ -1355,7 +1364,11 @@ class PointOfSale extends Component
 
             DB::commit();
 
-            $this->success(($usesPaymentTerms ? 'Invoice completed with payment terms! Invoice: ' : 'Invoice completed successfully! Invoice: ') . $sale->invoice_number);
+            $message = $hasReceivableBalance && $recordedPaidAmount <= 0
+                ? 'Invoice completed as receivable! Invoice: '
+                : ($hasReceivableBalance ? 'Invoice completed with partial payment! Invoice: ' : 'Invoice completed successfully! Invoice: ');
+
+            $this->success($message . $sale->invoice_number);
             $this->resetSale();
             $this->showInvoiceForm = false;
             $this->editingInvoiceId = null;
@@ -1709,6 +1722,40 @@ class PointOfSale extends Component
             'invoiceNumber.required' => 'Please enter an invoice number.',
             'invoiceNumber.unique' => 'This invoice number is already in use.',
         ]);
+
+        return true;
+    }
+
+    private function validateInvoiceReadyForCompletion(): bool
+    {
+        if (!$this->validateInvoiceNumber()) {
+            return false;
+        }
+
+        if (empty($this->cartItems)) {
+            $this->error('Cart is empty. Add items first.');
+            return false;
+        }
+
+        if ($this->hasIncompleteInvoiceProductLines()) {
+            $this->error('Please select a product for every invoice item.');
+            return false;
+        }
+
+        if (!$this->selectedCustomer) {
+            $this->error('Please select or create a customer before completing this invoice.');
+            return false;
+        }
+
+        $missingSerials = $this->checkSerialRequirements();
+        if (!empty($missingSerials)) {
+            $errorMessage = "Serial numbers required for:\n";
+            foreach ($missingSerials as $missing) {
+                $errorMessage .= "- {$missing['name']}: {$missing['current']}/{$missing['required']} entered\n";
+            }
+            $this->error($errorMessage);
+            return false;
+        }
 
         return true;
     }

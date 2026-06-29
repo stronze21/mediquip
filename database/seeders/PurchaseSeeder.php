@@ -111,7 +111,7 @@ class PurchaseSeeder extends Seeder
                 $this->createStockMovement([
                     'product_id' => $product->id,
                     'warehouse_id' => $warehouse->id,
-                    'type' => 'purchase_receipt',
+                    'type' => 'purchase',
                     'quantity_before' => 0, // Will be calculated
                     'quantity_changed' => $quantityReceived,
                     'quantity_after' => 0, // Will be calculated
@@ -186,7 +186,7 @@ class PurchaseSeeder extends Seeder
                     $this->createStockMovement([
                         'product_id' => $product->id,
                         'warehouse_id' => $warehouse->id,
-                        'type' => 'purchase_receipt',
+                        'type' => 'purchase',
                         'quantity_before' => 0,
                         'quantity_changed' => $quantityReceived,
                         'quantity_after' => 0,

@@ -300,7 +300,7 @@ class PurchaseOrder extends Model
     {
         $year = $date ? \Illuminate\Support\Carbon::parse($date)->format('Y') : now()->format('Y');
         $prefix = 'PO-' . $year;
-        $nextSequence = static::query()
+        $usedSequences = static::query()
             ->where('po_number', 'like', $prefix . '%')
             ->get(['po_number'])
             ->map(function (self $purchaseOrder) use ($prefix) {
@@ -308,7 +308,21 @@ class PurchaseOrder extends Model
                     ? (int) $matches[1]
                     : 0;
             })
-            ->max() + 1;
+            ->filter()
+            ->unique()
+            ->sort()
+            ->values();
+
+        $nextSequence = 1;
+        foreach ($usedSequences as $sequence) {
+            if ($sequence > $nextSequence) {
+                break;
+            }
+
+            if ($sequence === $nextSequence) {
+                $nextSequence++;
+            }
+        }
 
         return $prefix . str_pad((string) $nextSequence, 3, '0', STR_PAD_LEFT);
     }

@@ -567,7 +567,7 @@ class PurchaseOrderManagement extends Component
                 StockMovement::create([
                     'product_id' => $poItem->product_id,
                     'warehouse_id' => $po->warehouse_id,
-                    'type' => 'purchase_receipt',
+                    'type' => 'purchase',
                     'quantity_before' => max(0, ($inventory?->quantity_on_hand ?? 0) - $receivingItem['receiving_quantity']),
                     'quantity_changed' => $receivingItem['receiving_quantity'],
                     'quantity_after' => $inventory?->fresh()->quantity_on_hand ?? $receivingItem['receiving_quantity'],
@@ -618,14 +618,75 @@ class PurchaseOrderManagement extends Component
 
     public function deletePO(PurchaseOrder $po)
     {
-        if ($po->status !== 'draft') {
-            $this->error('Only draft purchase orders can be deleted.');
-            return;
-        }
-
         try {
-            $po->items()->delete();
-            $po->delete();
+            \DB::transaction(function () use ($po) {
+                $purchaseOrder = PurchaseOrder::with(['items.product', 'items.batches'])
+                    ->whereKey($po->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                foreach ($purchaseOrder->items as $item) {
+                    $receivedQuantity = (int) $item->quantity_received;
+
+                    if ($receivedQuantity <= 0) {
+                        continue;
+                    }
+
+                    $inventory = Inventory::where('product_id', $item->product_id)
+                        ->where('warehouse_id', $purchaseOrder->warehouse_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    $availableQuantity = $inventory
+                        ? (int) $inventory->quantity_on_hand - (int) $inventory->quantity_reserved
+                        : 0;
+
+                    if ($availableQuantity < $receivedQuantity) {
+                        $productName = $item->product?->name ?? 'Product #' . $item->product_id;
+
+                        throw new \RuntimeException(
+                            "{$productName} cannot be reverted. Received: {$receivedQuantity}, available: {$availableQuantity}."
+                        );
+                    }
+
+                    foreach ($item->batches as $batch) {
+                        if ((int) $batch->quantity_on_hand < (int) $batch->quantity_received) {
+                            $productName = $item->product?->name ?? 'Product #' . $item->product_id;
+
+                            throw new \RuntimeException(
+                                "{$productName} batch {$batch->batch_number} has already been consumed and cannot be reverted."
+                            );
+                        }
+                    }
+                }
+
+                foreach ($purchaseOrder->items as $item) {
+                    $receivedQuantity = (int) $item->quantity_received;
+
+                    if ($receivedQuantity <= 0) {
+                        continue;
+                    }
+
+                    $inventory = Inventory::where('product_id', $item->product_id)
+                        ->where('warehouse_id', $purchaseOrder->warehouse_id)
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    $inventory->update([
+                        'quantity_on_hand' => (int) $inventory->quantity_on_hand - $receivedQuantity,
+                    ]);
+
+                    $item->batches()->delete();
+                }
+
+                StockMovement::where('reference_type', PurchaseOrder::class)
+                    ->where('reference_id', $purchaseOrder->id)
+                    ->delete();
+
+                $purchaseOrder->items()->delete();
+                $purchaseOrder->delete();
+            });
+
             $this->success('Purchase order deleted successfully!');
         } catch (\Exception $e) {
             $this->error('Error deleting purchase order: ' . $e->getMessage());

@@ -474,6 +474,9 @@
             <x-mary-button label="Cancel" wire:click="closeInvoiceForm" class="btn-ghost" />
             <x-mary-button label="Save Draft" wire:click="saveInvoiceDraft" class="btn-outline"
                 :disabled="!$selectedCustomer || !$invoiceNumber || $this->hasIncompleteInvoiceProductLines()" />
+            <x-mary-button label="Proceed as Receivable" wire:click="proceedAsReceivable" class="btn-warning"
+                wire:confirm="Complete this invoice with no payment and record it as receivable?"
+                :disabled="!$invoiceNumber || !$canCheckout" />
             <x-mary-button label="Process Invoice" wire:click="openPaymentModal" class="btn-primary"
                 :disabled="!$invoiceNumber || !$canCheckout" />
         </div>
@@ -552,6 +555,12 @@
                                                 class="btn btn-xs btn-ghost" title="Preview invoice">
                                                 <x-mary-icon name="o-eye" class="w-4 h-4" />
                                             </a>
+                                            @if (!$invoice->is_paid)
+                                                <a href="{{ route('sales.payments', ['search' => $invoice->invoice_number]) }}"
+                                                    class="btn btn-xs btn-primary" title="Proceed payment">
+                                                    <x-mary-icon name="o-credit-card" class="w-4 h-4" />
+                                                </a>
+                                            @endif
                                         @endif
                                     </div>
                                 </td>
@@ -705,7 +714,7 @@
             <div class="space-y-2">
                 <x-mary-input label="{{ $paymentMethod === 'terms' ? 'Initial Payment (Optional)' : 'Amount Received' }}"
                     wire:model.live="paidAmount" type="number" step="0.01"
-                    class="{{ $paymentMethod !== 'terms' && $paidAmount < $totalAmount ? 'input-error' : ($changeAmount > 0 ? 'input-success' : '') }}" />
+                    class="{{ $changeAmount > 0 ? 'input-success' : '' }}" />
 
                 @if ($paymentMethod === 'cash')
                     <div class="flex flex-wrap gap-2">
@@ -728,18 +737,31 @@
                     <div class="text-sm text-warning">
                         Outstanding balance: &#8369;{{ number_format(max(0, $totalAmount - (float) ($paidAmount ?: 0)), 2) }}
                     </div>
-                @elseif ($paidAmount > 0)
+                @else
                     <div class="text-sm">
-                        @if ($paidAmount < $totalAmount)
-                            <div class="text-error">
+                        @if ((float) ($paidAmount ?: 0) <= 0)
+                            <div class="text-warning">
+                                No payment received. Full balance will be recorded as receivable.
+                            </div>
+                        @elseif ($paidAmount < $totalAmount)
+                            <div class="text-warning">
+                                Partial payment. Balance to receivable: &#8369;{{ number_format($totalAmount - (float) $paidAmount, 2) }}
+                            </div>
+                            <div class="hidden">
                                 ÃƒÂ¢Ã…Â¡Ã‚Â ÃƒÂ¯Ã‚Â¸Ã‚Â Insufficient payment: &#8369;{{ number_format($totalAmount - $paidAmount, 2) }} remaining
                             </div>
                         @elseif ($paidAmount == $totalAmount)
                             <div class="text-success">
+                                Exact payment received
+                            </div>
+                            <div class="hidden">
                                 ÃƒÂ¢Ã…â€œÃ¢â‚¬Â¦ Exact payment received
                             </div>
                         @else
                             <div class="text-info">
+                                Overpayment: &#8369;{{ number_format($changeAmount, 2) }} change due
+                            </div>
+                            <div class="hidden">
                                 ÃƒÂ°Ã…Â¸Ã¢â‚¬â„¢Ã‚Â° Overpayment: &#8369;{{ number_format($changeAmount, 2) }} change due
                             </div>
                         @endif
@@ -766,7 +788,7 @@
         <x-slot:actions>
             <x-mary-button label="Cancel" wire:click="$set('showPaymentModal', false)" />
             <x-mary-button label="Complete Invoice" wire:click="completeSale" class="btn-success"
-                :disabled="$paymentMethod !== 'terms' && $paidAmount < $totalAmount" />
+                :disabled="(float) ($paidAmount ?: 0) < 0" />
         </x-slot:actions>
     </x-mary-modal>
 

@@ -436,11 +436,9 @@
                                                     <x-heroicon-o-eye class="w-4 h-4" /> View Details</a></li>
                                             <li><a wire:click="printPO({{ $po->id }})" class="text-info">
                                                     <x-heroicon-o-printer class="w-4 h-4" /> Print PO</a></li>
-                                            @if ($po->status === 'draft')
-                                                <li><a wire:click="deletePO({{ $po->id }})" class="text-error"
-                                                        wire:confirm="Are you sure you want to delete this purchase order?">
-                                                        <x-heroicon-o-trash class="w-4 h-4" /> Delete</a></li>
-                                            @endif
+                                            <li><a wire:click="deletePO({{ $po->id }})" class="text-error"
+                                                    wire:confirm="Hard delete this purchase order? If received stock was already used, deletion will be blocked.">
+                                                    <x-heroicon-o-trash class="w-4 h-4" /> Delete</a></li>
                                             @if (in_array($po->status, ['draft', 'pending']))
                                                 <li><a wire:click="cancelPO({{ $po->id }})" class="text-warning"
                                                         wire:confirm="Are you sure you want to cancel this purchase order?">
