@@ -143,7 +143,7 @@
         <div class="invoice-details">
             <h3>Invoice Details</h3>
             <p><strong>Invoice Number:</strong> {{ $sale->invoice_number }}</p>
-            <p><strong>Date:</strong> {{ $sale->created_at->format('M d, Y H:i') }}</p>
+            <p><strong>Date:</strong> {{ ($sale->invoice_date ?? $sale->created_at)->format('M d, Y') }}</p>
             <p><strong>Warehouse:</strong> {{ $sale->warehouse->name }}</p>
             <p><strong>Cashier:</strong> {{ $sale->user->name }}</p>
             <p><strong>Payment Method:</strong> {{ $sale->payment_method_label }}</p>

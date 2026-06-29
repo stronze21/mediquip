@@ -42,6 +42,7 @@ class PointOfSale extends Component
     public $saleNotes = '';
     public $invoiceType = 'sales';
     public $invoiceNumber = '';
+    public $invoiceDate = '';
 
     // UI state
     public $showCustomerModal = false;
@@ -117,6 +118,7 @@ class PointOfSale extends Component
     public function mount()
     {
         $this->selectedWarehouse = Warehouse::where('is_active', true)->first()?->id;
+        $this->invoiceDate = now()->toDateString();
 
         $this->loadHeldSales();
     }
@@ -144,9 +146,9 @@ class PointOfSale extends Component
             ->when($this->invoiceTypeFilter, fn($query) => $query->where('invoice_type', $this->invoiceTypeFilter))
             ->when($this->invoiceDateFilter, function ($query) {
                 return match ($this->invoiceDateFilter) {
-                    'today' => $query->whereDate('created_at', today()),
-                    'week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
-                    'month' => $query->whereMonth('created_at', now()->month)->whereYear('created_at', now()->year),
+                    'today' => $query->whereDate('invoice_date', today()),
+                    'week' => $query->whereBetween('invoice_date', [now()->startOfWeek()->toDateString(), now()->endOfWeek()->toDateString()]),
+                    'month' => $query->whereMonth('invoice_date', now()->month)->whereYear('invoice_date', now()->year),
                     default => $query,
                 };
             })
@@ -233,6 +235,7 @@ class PointOfSale extends Component
         $this->selectedWarehouse = $sale->warehouse_id;
         $this->invoiceType = $sale->invoice_type ?? 'sales';
         $this->invoiceNumber = $sale->invoice_number;
+        $this->invoiceDate = $sale->invoice_date?->toDateString() ?? $sale->created_at->toDateString();
         $this->taxType = $sale->tax_type ?? 'vat_12';
         $this->taxRate = (float) ($sale->tax_rate ?? $this->taxRateForType($this->taxType));
         $this->disableInvoiceDiscounts();
@@ -1175,6 +1178,10 @@ class PointOfSale extends Component
             return;
         }
 
+        if (!$this->validateInvoiceDate()) {
+            return;
+        }
+
         if (empty($this->cartItems)) {
             $this->error('Cart is empty. Add items first.');
             return;
@@ -1313,6 +1320,7 @@ class PointOfSale extends Component
 
             $saleData = [
                 'invoice_number' => $invoiceNumber,
+                'invoice_date' => $this->invoiceDate,
                 'customer_id' => $this->selectedCustomer,
                 'promotion_code' => null,
                 'invoice_type' => $this->invoiceType,
@@ -1603,6 +1611,7 @@ class PointOfSale extends Component
         $this->paymentDueDate = '';
         $this->saleNotes = '';
         $this->invoiceNumber = '';
+        $this->invoiceDate = now()->toDateString();
         $this->updateCartTotals();
     }
 
@@ -1645,6 +1654,7 @@ class PointOfSale extends Component
 
             $invoiceData = [
                 'invoice_number' => $invoiceNumber,
+                'invoice_date' => $this->invoiceDate,
                 'customer_id' => $this->selectedCustomer,
                 'promotion_code' => null,
                 'invoice_type' => $this->invoiceType,
@@ -1726,9 +1736,24 @@ class PointOfSale extends Component
         return true;
     }
 
+    private function validateInvoiceDate(): bool
+    {
+        $this->validate([
+            'invoiceDate' => ['required', 'date'],
+        ], [
+            'invoiceDate.required' => 'Please enter an invoice date.',
+        ]);
+
+        return true;
+    }
+
     private function validateInvoiceReadyForCompletion(): bool
     {
         if (!$this->validateInvoiceNumber()) {
+            return false;
+        }
+
+        if (!$this->validateInvoiceDate()) {
             return false;
         }
 
@@ -2109,6 +2134,7 @@ class PointOfSale extends Component
             // Create a held sale record
             $heldSale = Sale::create([
                 'invoice_number' => $this->holdReference,
+                'invoice_date' => $this->invoiceDate ?: now()->toDateString(),
                 'customer_id' => $this->selectedCustomer,
                 'promotion_code' => $this->discountAmount > 0 ? $this->discountLabel() : null,
                 'invoice_type' => $this->invoiceType,
@@ -2202,6 +2228,7 @@ class PointOfSale extends Component
             $this->selectedCustomer = $heldSale->customer_id;
             $this->selectedWarehouse = $heldSale->warehouse_id;
             $this->invoiceType = $heldSale->invoice_type ?? 'sales';
+            $this->invoiceDate = $heldSale->invoice_date?->toDateString() ?? $heldSale->created_at->toDateString();
             $this->taxType = $heldSale->tax_type ?? 'vat_12';
             $this->taxRate = (float) ($heldSale->tax_rate ?? $this->taxRateForType($this->taxType));
             $this->discountAmount = $heldSale->discount_amount;

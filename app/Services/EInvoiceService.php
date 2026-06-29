@@ -18,7 +18,7 @@ class EInvoiceService
                 'number' => $sale->invoice_number,
                 'status' => $sale->status,
                 'type' => $sale->invoice_type ?? 'sales',
-                'issued_at' => optional($sale->completed_at ?? $sale->created_at)->toIso8601String(),
+                'issued_at' => optional($sale->invoice_date ?? $sale->completed_at ?? $sale->created_at)->toIso8601String(),
                 'currency' => 'PHP',
                 'payment_method' => $sale->payment_method,
                 'payment_terms' => $sale->payment_terms,

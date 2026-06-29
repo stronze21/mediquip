@@ -11,6 +11,7 @@ class Sale extends Model
 
     protected $fillable = [
         'invoice_number',
+        'invoice_date',
         'customer_id',
         'promotion_id',
         'promotion_code',
@@ -42,6 +43,7 @@ class Sale extends Model
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'change_amount' => 'decimal:2',
+        'invoice_date' => 'date',
         'due_date' => 'date',
         'completed_at' => 'datetime',
     ];

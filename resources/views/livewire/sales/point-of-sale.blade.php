@@ -58,6 +58,8 @@
                         <x-mary-input label="Invoice Number *" wire:model.blur="invoiceNumber"
                             placeholder="Enter invoice number" />
 
+                        <x-mary-input label="Invoice Date *" wire:model="invoiceDate" type="date" />
+
                         <x-mary-select label="Warehouse *" :options="$warehouses" wire:model="selectedWarehouse"
                             option-value="id" option-label="name" placeholder="Select warehouse" />
 
@@ -470,15 +472,19 @@
                 <p class="text-xs text-error md:mr-auto">
                     Invoice number is required before saving or processing this invoice.
                 </p>
+            @elseif (!$invoiceDate)
+                <p class="text-xs text-error md:mr-auto">
+                    Invoice date is required before saving or processing this invoice.
+                </p>
             @endif
             <x-mary-button label="Cancel" wire:click="closeInvoiceForm" class="btn-ghost" />
             <x-mary-button label="Save Draft" wire:click="saveInvoiceDraft" class="btn-outline"
-                :disabled="!$selectedCustomer || !$invoiceNumber || $this->hasIncompleteInvoiceProductLines()" />
+                :disabled="!$selectedCustomer || !$invoiceNumber || !$invoiceDate || $this->hasIncompleteInvoiceProductLines()" />
             <x-mary-button label="Proceed as Receivable" wire:click="proceedAsReceivable" class="btn-warning"
                 wire:confirm="Complete this invoice with no payment and record it as receivable?"
-                :disabled="!$invoiceNumber || !$canCheckout" />
+                :disabled="!$invoiceNumber || !$invoiceDate || !$canCheckout" />
             <x-mary-button label="Process Invoice" wire:click="openPaymentModal" class="btn-primary"
-                :disabled="!$invoiceNumber || !$canCheckout" />
+                :disabled="!$invoiceNumber || !$invoiceDate || !$canCheckout" />
         </div>
     </div>
 
@@ -541,7 +547,7 @@
                                     <x-mary-badge value="{{ ucfirst($invoice->status) }}"
                                         class="badge-{{ $invoice->status === 'completed' ? 'success' : ($invoice->status === 'draft' ? 'warning' : 'neutral') }}" />
                                 </td>
-                                <td>{{ $invoice->created_at->format('M d, Y') }}</td>
+                                <td>{{ ($invoice->invoice_date ?? $invoice->created_at)->format('M d, Y') }}</td>
                                 <td>
                                     <div class="flex gap-1">
                                         @if ($invoice->status === 'draft')
