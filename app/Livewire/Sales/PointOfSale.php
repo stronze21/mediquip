@@ -1277,9 +1277,8 @@ class PointOfSale extends Component
         try {
             DB::beginTransaction();
 
-            // Check inventory for products only WITHOUT locking - immediate response
+            // Check inventory for products before committing the invoice.
             $inventoryIssues = [];
-            $inventorySnapshots = [];
 
             foreach ($this->cartItems as $cartKey => $item) {
                 // Skip inventory checks for services
@@ -1292,12 +1291,6 @@ class PointOfSale extends Component
                     ->first();
 
                 $availableQty = $currentInventory ? $currentInventory->quantity_available : 0;
-
-                // Store current state for later verification
-                $inventorySnapshots[$item['product_id']] = [
-                    'current_quantity' => $currentInventory ? $currentInventory->quantity_on_hand : 0,
-                    'updated_at' => $currentInventory ? $currentInventory->updated_at : null
-                ];
 
                 if ($availableQty < $item['quantity']) {
                     $inventoryIssues[] = [
@@ -1355,7 +1348,9 @@ class PointOfSale extends Component
             foreach ($this->cartItems as $cartKey => $item) {
                 if ($item['item_type'] === 'product') {
                     // Handle product sales
-                    $this->processProductSale($sale, $item, $inventorySnapshots);
+                    if (!$this->processProductSale($sale, $item)) {
+                        return;
+                    }
                 } else {
                     // Handle service sales
                     $this->processServiceSale($sale, $item);
@@ -1387,7 +1382,7 @@ class PointOfSale extends Component
         }
     }
 
-    private function processProductSale($sale, $item, $inventorySnapshots)
+    private function processProductSale($sale, $item): bool
     {
         $product = Product::find($item['product_id']);
 
@@ -1445,41 +1440,42 @@ class PointOfSale extends Component
             }
         }
 
-        // Optimistic update with version check
-        $snapshot = $inventorySnapshots[$item['product_id']];
-
-        $updateResult = DB::table('inventories')
-            ->where('product_id', $item['product_id'])
+        $inventory = Inventory::where('product_id', $item['product_id'])
             ->where('warehouse_id', $this->selectedWarehouse)
-            ->where('quantity_on_hand', $snapshot['current_quantity']) // Ensure quantity hasn't changed
-            ->where('updated_at', $snapshot['updated_at']) // Ensure record hasn't been modified
-            ->update([
-                'quantity_on_hand' => $snapshot['current_quantity'] - $item['quantity'],
-                'updated_at' => now()
-            ]);
+            ->lockForUpdate()
+            ->first();
 
-        // If update failed, someone else modified the inventory
-        if ($updateResult === 0) {
+        if (!$inventory || $inventory->quantity_available < $item['quantity']) {
             DB::rollBack();
-            $this->error('Inventory was modified by another user. Please refresh and try again.');
+            $this->handleInventoryConflict([[
+                'product' => $item['name'],
+                'requested' => $item['quantity'],
+                'available' => $inventory ? $inventory->quantity_available : 0,
+            ]]);
             $this->refreshCartInventory();
-            return;
+            return false;
         }
+
+        $quantityBefore = $inventory->quantity_on_hand;
+        $inventory->quantity_on_hand = $quantityBefore - $item['quantity'];
+        $inventory->save();
 
         // Create stock movement
         StockMovement::create([
             'product_id' => $item['product_id'],
             'warehouse_id' => $this->selectedWarehouse,
             'type' => 'sale',
-            'quantity_before' => $snapshot['current_quantity'],
+            'quantity_before' => $quantityBefore,
             'quantity_changed' => -$item['quantity'],
-            'quantity_after' => $snapshot['current_quantity'] - $item['quantity'],
+            'quantity_after' => $inventory->quantity_on_hand,
             'unit_cost' => $product->cost_price ?? 0,
             'reference_id' => $sale->id,
             'reference_type' => Sale::class,
             'user_id' => auth()->id(),
             'notes' => 'Sale: ' . $sale->invoice_number,
         ]);
+
+        return true;
     }
 
     private function processServiceSale($sale, $item)
